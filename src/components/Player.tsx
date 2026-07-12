@@ -7,6 +7,7 @@ import { museumAudio } from '../audio'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { resolvePlayerMovement } from '../hooks/useCollision'
 import { useStore } from '../store/useStore'
+import { seatRegistry } from '../utils/seatRegistry'
 
 const direction = new Vector3()
 const displacement = new Vector3()
@@ -16,6 +17,8 @@ const euler = new Euler(0, 0, 0, 'YXZ')
 const eyeHeight = 1.68
 const jumpSpeed = 5
 const gravity = 14
+
+const SEAT_RANGE_SQ = 2.2 * 2.2
 
 const deepLinks: Record<string, { position: [number, number, number]; target: [number, number, number] }> = {
   entrance: { position: [0, 1.68, 9.02], target: [0, 2, -4] },
@@ -34,6 +37,8 @@ export function Player() {
   const jumping = useRef(false)
   const lastPoseUpdate = useRef(0)
   const walkPhase = useRef(0)
+  const focusedSeatId = useRef<string | null>(null)
+  const seatReturn = useRef<[number, number, number] | null>(null)
   const mobile = useIsMobile()
   const entered = useStore((state) => state.entered)
   const activePoster = useStore((state) => state.activePoster)
@@ -68,6 +73,34 @@ export function Player() {
     }
   }, [camera])
 
+  // Nhấn E: ngồi xuống ghế đang ngắm / đứng dậy.
+  useEffect(() => {
+    const onInteract = (event: KeyboardEvent) => {
+      if (event.code !== 'KeyE' && event.code !== 'Enter') return
+      const store = useStore.getState()
+      if (!store.entered || store.activePoster) return
+      if (store.seated) {
+        const back = seatReturn.current ?? [camera.position.x, 1.68, camera.position.z]
+        camera.position.set(back[0], back[1], back[2])
+        seatReturn.current = null
+        store.stand()
+        museumAudio.click()
+        return
+      }
+      if (store.focusedSeat && !store.focusedPoster) {
+        const seat = store.focusedSeat
+        // Nhớ đúng chỗ đang đứng (đã đi được) để lát nữa đứng dậy trả về, tránh kẹt trong vùng va chạm của ghế.
+        seatReturn.current = [camera.position.x, 1.68, camera.position.z]
+        camera.position.set(seat.eye[0], seat.eye[1], seat.eye[2])
+        camera.lookAt(seat.look[0], seat.look[1], seat.look[2])
+        store.sit(seat)
+        museumAudio.click()
+      }
+    }
+    addEventListener('keydown', onInteract)
+    return () => removeEventListener('keydown', onInteract)
+  }, [camera])
+
   useFrame((state, delta) => {
     const store = useStore.getState()
     const cappedDelta = Math.min(delta, 0.05)
@@ -88,6 +121,37 @@ export function Player() {
         lastPoseUpdate.current = state.clock.elapsedTime
       }
       return
+    }
+
+    // Đang ngồi: khóa vị trí, vẫn cho xoay nhìn quanh.
+    if (store.seated) {
+      if (focusedSeatId.current !== null) { store.setFocusedSeat(null); focusedSeatId.current = null }
+      if (mobile && (store.mobileLook.x || store.mobileLook.y)) {
+        euler.setFromQuaternion(frameCamera.quaternion)
+        euler.y -= store.mobileLook.x * 0.028
+        euler.x = Math.max(-1.25, Math.min(1.25, euler.x - store.mobileLook.y * 0.024))
+        frameCamera.quaternion.setFromEuler(euler)
+        store.setMobileLook({ x: 0, y: 0 })
+      }
+      if (state.clock.elapsedTime - lastPoseUpdate.current > 0.12) {
+        store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirZ: forward.z })
+        lastPoseUpdate.current = state.clock.elapsedTime
+      }
+      return
+    }
+
+    // Tìm ghế gần nhất trong tầm với để hiện gợi ý "Nhấn E để ngồi".
+    let nearest: string | null = null
+    let nearestDist = SEAT_RANGE_SQ
+    for (const seat of seatRegistry) {
+      const dx = frameCamera.position.x - seat.center[0]
+      const dz = frameCamera.position.z - seat.center[1]
+      const dist = dx * dx + dz * dz
+      if (dist < nearestDist) { nearestDist = dist; nearest = seat.id }
+    }
+    if (nearest !== focusedSeatId.current) {
+      focusedSeatId.current = nearest
+      store.setFocusedSeat(nearest ? seatRegistry.find((seat) => seat.id === nearest) ?? null : null)
     }
 
     const zInput = (keys.current.has('KeyW') || keys.current.has('ArrowUp') ? 1 : 0)
