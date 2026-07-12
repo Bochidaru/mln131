@@ -1,27 +1,42 @@
-# Bảo tàng ảo 3D — Hành trình Chủ nghĩa xã hội khoa học
+# Bảo tàng Tri thức MLN131
 
-Trải nghiệm bảo tàng 3D trên trình duyệt với chín không gian, 24 poster minh họa và nội dung tóm lược bảy chương của học phần.
+Trải nghiệm bảo tàng 3D tương tác về học phần Chủ nghĩa xã hội khoa học. Người xem bắt đầu trước cổng chính, tự đi qua quảng trường và đại sảnh, sau đó khám phá tám phòng chuyên đề trên một mặt bằng bảo tàng hoàn chỉnh.
 
-## Chạy cục bộ
+## Chạy tại máy
 
-```bash
+```powershell
+Set-Location 'D:\virtual-museum'
 npm install
-npm run dev
+npm run dev -- --host 127.0.0.1 --port 4173
 ```
 
-Mở địa chỉ Vite hiển thị trong terminal. Trên desktop, dùng `WASD` để đi, chuột để nhìn và `ESC` để thả chuột. Trên thiết bị cảm ứng, dùng joystick trái và vuốt vùng bên phải.
+Mở `http://127.0.0.1:4173` trong Chrome hoặc Edge.
 
-## Build production
+### Điều khiển
 
-```bash
+- `W A S D` hoặc phím mũi tên: di chuyển.
+- Chuột: quan sát; nhấp vào cảnh 3D để khóa chuột, `Esc` để thả.
+- `Shift`: đi nhanh.
+- `E` hoặc nhấp chuột: xem hiện vật đang được ngắm.
+- Điện thoại: joystick bên trái để đi, vuốt nửa phải để nhìn.
+
+## Kiểm tra trước khi triển khai
+
+```powershell
+npm run lint
 npm run build
-npm run preview
+npm run smoke -- http://127.0.0.1:4173
+npm run capture -- http://127.0.0.1:4173 final
 ```
 
-Thư mục `dist/` có thể triển khai trực tiếp lên Vercel, Netlify hoặc GitHub Pages.
+`smoke` dùng Chrome cài trên Windows để kiểm tra mở/đóng hồ sơ hiện vật. `capture` ghi các góc intro, cổng, sảnh, hành lang, gallery và mobile vào `_artifacts/` để duyệt trực quan.
 
-## Ghi chú nội dung và hình ảnh
+## Cấu trúc chính
 
-- Nội dung được tổ chức tập trung trong `src/data/content.ts` để giao diện 3D và fallback 2D dùng chung.
-- 24 poster là hình minh họa AI nguyên bản, không dùng chân dung nhân vật lịch sử, không chứa chữ hoặc biểu trưng.
-- Âm thanh ambient, bước chân và click được tổng hợp cục bộ, không dùng bản ghi có bản quyền từ bên ngoài.
+- `src/data/content.ts`: nội dung 9 khu và 24 hiện vật.
+- `src/data/layout.ts`: mặt bằng dùng chung cho cảnh 3D, collision và minimap.
+- `src/components/Exterior.tsx`: cổng, sân, cảnh quan và mặt tiền.
+- `src/components/MuseumInterior.tsx`: sảnh, hành lang, gallery, biển tên và nội thất.
+- `public/posters/`: 24 poster WebP của triển lãm.
+
+Thư mục `dist/` được tạo bởi `npm run build` và có thể triển khai lên dịch vụ host tĩnh hỗ trợ Vite.
