@@ -2,7 +2,7 @@ export interface PosterData { id: string; image: string; title: string; summary:
 export interface RoomData { id: number; name: string; subtitle: string; posters: PosterData[] }
 
 const poster = (id: string, title: string, summary: string, keyPoints: string[]): PosterData => ({
-  id, title, summary, keyPoints, image: `/posters/${id}.webp`,
+  id, title, summary, keyPoints, image: `${import.meta.env.BASE_URL}posters/${id}.webp`,
 })
 
 export const rooms: RoomData[] = [
@@ -51,7 +51,7 @@ export const rooms: RoomData[] = [
 ]
 
 export const uiText = {
-  eyebrow: 'Bảo tàng ảo 3D', title: 'Hành trình\nChủ nghĩa xã hội khoa học', enter: 'Bước vào bảo tàng',
-  intro: 'Bảy chương · Chín không gian · Một hành trình từ lý luận đến thực tiễn', instructions: 'WASD để di chuyển · Chuột để quan sát · ESC để thả chuột',
-  view: 'Chọn để xem', close: 'Đóng', audioOn: 'Tắt âm thanh', audioOff: 'Bật âm thanh', map: 'Bản đồ', fallbackTitle: 'Tham quan bản 2D',
+  eyebrow: 'Triển lãm tương tác · 2026', title: 'Bảo tàng\nTri thức MLN131', enter: 'Bắt đầu tham quan',
+  intro: 'Bảy chương · Tám phòng chuyên đề · Một hành trình từ lý luận đến thực tiễn', instructions: 'WASD để di chuyển · Chuột để quan sát · ESC để thả chuột',
+  view: 'Nhấn E hoặc chọn để xem', close: 'Đóng', audioOn: 'Tắt âm thanh', audioOff: 'Bật âm thanh', map: 'Sơ đồ tầng', fallbackTitle: 'Tham quan bản 2D',
 }
