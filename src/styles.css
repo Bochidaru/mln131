@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Rubik+Mono+One&display=swap');
+:root { font-family: 'Be Vietnam Pro', sans-serif; color: #F0E6D2; background: #1A1210; font-synthesis: none; --red: #C8341E; --cream: #F0E6D2; --black: #1A1210; --brown: #4A3428; --gold: #B8863B; }
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+button { font: inherit; }
+.intro { min-height: 100%; position: relative; display: grid; place-items: center; overflow: hidden; background: var(--cream); color: var(--black); }
+.intro::before { content: ''; position: absolute; width: 36vw; height: 130vh; left: -11vw; top: -15vh; background: var(--red); transform: rotate(18deg); }
+.intro-grid { position: absolute; inset: 0; opacity: .15; background-size: 44px 44px; background-image: linear-gradient(90deg, var(--black) 1px, transparent 1px), linear-gradient(var(--black) 1px, transparent 1px); }
+.red-wedge { position: absolute; right: -9vw; top: 12vh; width: 46vw; height: 33vw; background: var(--red); clip-path: polygon(100% 0, 100% 100%, 0 52%); }
+.red-wedge::after { content: ''; position: absolute; inset: 8% 0 8% 35%; background: var(--black); clip-path: polygon(100% 0, 100% 100%, 0 52%); }
+.intro-copy { position: relative; z-index: 2; width: min(960px, 76vw); margin-left: 7vw; }
+.eyebrow { margin: 0 0 18px; color: var(--red); text-transform: uppercase; letter-spacing: .24em; font-weight: 700; font-size: 12px; }
+h1, h2, .room-indicator strong { font-family: 'Rubik Mono One', sans-serif; text-transform: uppercase; font-weight: 400; }
+.intro h1 { margin: 0; max-width: 850px; font-size: clamp(42px, 6.8vw, 104px); line-height: .94; letter-spacing: -.045em; }
+.intro h1 span { display: block; }
+.intro-deck { max-width: 620px; margin: 30px 0; font-size: clamp(15px, 1.5vw, 20px); line-height: 1.65; }
+.primary-button { min-width: 280px; padding: 19px 22px; border: 0; display: inline-flex; justify-content: space-between; background: var(--black); color: var(--cream); text-transform: uppercase; letter-spacing: .12em; font-weight: 700; cursor: pointer; transition: transform .2s, background .2s; }
+.primary-button:hover { background: var(--red); transform: translateY(-3px); }
+.instructions { font-size: 11px; letter-spacing: .08em; opacity: .65; margin-top: 18px; }
+.edition { position: absolute; z-index: 2; right: 4vw; bottom: 3vw; margin: 0; text-align: right; color: var(--cream); font-weight: 700; letter-spacing: .15em; line-height: 1.6; font-size: 11px; }
+.museum, .museum canvas { width: 100%; height: 100%; background: var(--black); }
+.app-loading { width: 100%; height: 100%; display: grid; place-items: center; background: var(--black); color: var(--cream); font: 14px 'Rubik Mono One'; letter-spacing: .18em; }
+.hud { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+.crosshair { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; border: 1px solid var(--cream); transform: translate(-50%, -50%) rotate(45deg); transition: .2s; opacity: .68; }
+.crosshair.is-focused { width: 17px; height: 17px; border-color: var(--red); background: color-mix(in srgb, var(--red) 30%, transparent); }
+.interaction-hint { position: absolute; left: 50%; top: calc(50% + 28px); transform: translateX(-50%); margin: 0; padding: 8px 12px; color: var(--cream); background: var(--black); border: 1px solid var(--gold); text-transform: uppercase; font-size: 10px; letter-spacing: .14em; }
+.room-indicator { position: absolute; left: 28px; top: 26px; display: flex; align-items: center; gap: 15px; text-transform: uppercase; }
+.room-indicator > span { font: 38px/1 'Rubik Mono One'; color: var(--red); }
+.room-indicator small, .room-indicator strong { display: block; }
+.room-indicator small { color: var(--gold); letter-spacing: .2em; font-size: 9px; margin-bottom: 4px; }
+.room-indicator strong { max-width: 350px; font-size: 11px; letter-spacing: .06em; }
+.audio-toggle { pointer-events: auto; position: absolute; right: 24px; top: 24px; border: 1px solid color-mix(in srgb, var(--cream) 35%, transparent); color: var(--cream); background: color-mix(in srgb, var(--black) 88%, transparent); padding: 10px 12px; cursor: pointer; }
+.audio-toggle span { margin-left: 8px; text-transform: uppercase; font-size: 9px; letter-spacing: .1em; }
+.minimap { position: fixed; z-index: 4; right: 25px; bottom: 24px; display: flex; gap: 3px; }
+.minimap div { color: var(--cream); opacity: .35; text-align: center; font-size: 8px; }
+.minimap i { display: block; width: 22px; height: 3px; background: currentColor; margin-bottom: 5px; }
+.minimap .visited { color: var(--gold); opacity: .7; }.minimap .active { color: var(--red); opacity: 1; }.minimap .active i { height: 6px; }
+.panel-backdrop { position: fixed; inset: 0; z-index: 20; background: color-mix(in srgb, var(--black) 60%, transparent); display: flex; justify-content: flex-end; }
+.content-panel { width: min(720px, 70vw); height: 100%; overflow: auto; background: color-mix(in srgb, var(--black) 96%, transparent); border-left: 1px solid var(--gold); padding: 5vh clamp(25px, 5vw, 72px); animation: slide-in .34s ease-out; }
+.close-button { position: absolute; right: 24px; top: 20px; width: 42px; height: 42px; color: var(--cream); background: transparent; border: 1px solid var(--gold); font-size: 25px; cursor: pointer; }
+.panel-image-wrap { width: min(270px, 60%); aspect-ratio: 2/3; padding: 7px; background: var(--gold); margin-bottom: 34px; }
+.panel-image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; background: var(--red); }
+.panel-copy h2 { font-size: clamp(24px, 3vw, 42px); line-height: 1.08; margin: 0 0 25px; }
+.summary { line-height: 1.8; color: color-mix(in srgb, var(--cream) 82%, transparent); }
+.panel-copy ul { margin: 30px 0 0; padding: 0; list-style: none; border-top: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); }
+.panel-copy li { padding: 15px 0 15px 22px; border-bottom: 1px solid color-mix(in srgb, var(--gold) 30%, transparent); position: relative; }
+.panel-copy li::before { content: '◆'; position: absolute; left: 0; color: var(--red); font-size: 8px; top: 20px; }
+.fallback { height: 100%; overflow: auto; padding: 8vw; background: var(--cream); color: var(--black); }.fallback h1 { max-width: 800px; font-size: clamp(36px, 6vw, 80px); }.fallback section { border-top: 2px solid var(--black); }.fallback section > button { width: 100%; display: grid; grid-template-columns: 60px 1fr auto; border: 0; padding: 20px 0; background: none; text-align: left; text-transform: uppercase; font-weight: 700; cursor: pointer; }.fallback section > div { padding: 0 0 28px 60px; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }.fallback article { border-left: 4px solid var(--red); padding-left: 20px; }.fallback h2 { font-family: 'Be Vietnam Pro'; font-size: 17px; }.fallback p, .fallback li { line-height: 1.65; }
+.mobile-controls { position: fixed; z-index: 8; inset: 0; pointer-events: none; }.joystick, .look-zone { pointer-events: auto; touch-action: none; position: absolute; bottom: 30px; }.joystick { left: 30px; width: 100px; height: 100px; border: 1px solid var(--gold); border-radius: 50%; }.joystick i { position: absolute; inset: 31px; border-radius: 50%; background: var(--red); }.look-zone { right: 0; width: 48%; height: 55%; display: grid; place-items: end center; color: var(--cream); font-size: 8px; letter-spacing: .15em; padding: 15px; opacity: .6; }
+@keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@media (max-width: 700px) { .intro::before { width: 45vw; }.intro-copy { width: 84vw; margin-left: 0; }.intro h1 { font-size: 42px; }.red-wedge { opacity: .5; }.instructions { display: none; }.content-panel { width: 100%; }.room-indicator { left: 16px; top: 15px; }.room-indicator strong { max-width: 220px; font-size: 9px; }.audio-toggle { right: 14px; top: 14px; }.audio-toggle span { display: none; }.minimap { right: 14px; bottom: 12px; }.minimap i { width: 14px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
