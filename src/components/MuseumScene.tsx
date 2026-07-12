@@ -11,6 +11,7 @@ import { Minimap } from './Minimap'
 import { MobileControls } from './MobileControls'
 import { MuseumInterior } from './MuseumInterior'
 import { Player } from './Player'
+import { Surroundings } from './Surroundings'
 
 export function MuseumScene() {
   return <main className="museum">
@@ -48,6 +49,7 @@ export function MuseumScene() {
       <pointLight position={[0, 5.2, 10.5]} color="#ffdca6" intensity={8} distance={18} decay={2} />
 
       <Suspense fallback={null}>
+        <Surroundings />
         <Exterior />
         <MuseumInterior />
         <Environment files="/textures/env.hdr" environmentIntensity={0.42} />
