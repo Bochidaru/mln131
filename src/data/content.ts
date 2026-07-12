@@ -52,6 +52,6 @@ export const rooms: RoomData[] = [
 
 export const uiText = {
   eyebrow: 'Triển lãm tương tác · 2026', title: 'Bảo tàng\nTri thức MLN131', enter: 'Bắt đầu tham quan',
-  intro: 'Bảy chương · Tám phòng chuyên đề · Một hành trình từ lý luận đến thực tiễn', instructions: 'WASD để di chuyển · Chuột để quan sát · ESC để thả chuột',
+  intro: 'Bảy chương · Tám phòng chuyên đề · Một hành trình từ lý luận đến thực tiễn', instructions: 'WASD để di chuyển · Chuột để quan sát · Q bật/tắt điều khiển · Space để nhảy',
   view: 'Nhấn E hoặc chọn để xem', close: 'Đóng', audioOn: 'Tắt âm thanh', audioOff: 'Bật âm thanh', map: 'Sơ đồ tầng', fallbackTitle: 'Tham quan bản 2D',
 }

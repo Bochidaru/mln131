@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { rooms, uiText } from '../data/content'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { useStore } from '../store/useStore'
 
 export function ContentPanel() {
@@ -7,6 +8,16 @@ export function ContentPanel() {
   const close = useStore((state) => state.closePoster)
   const openPoster = useStore((state) => state.openPoster)
   const closeButton = useRef<HTMLButtonElement>(null)
+  const mobile = useIsMobile()
+
+  const closeAndResume = useCallback(() => {
+    close()
+    if (mobile) return
+    const canvas = document.querySelector<HTMLCanvasElement>('#museum-canvas')
+    if (canvas && document.pointerLockElement !== canvas) {
+      canvas.requestPointerLock().catch(() => undefined)
+    }
+  }, [close, mobile])
 
   const context = useMemo(() => {
     if (!poster) return null
@@ -21,7 +32,10 @@ export function ContentPanel() {
     const returnFocus = document.activeElement as HTMLElement | null
     closeButton.current?.focus()
     const keyboard = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close()
+      if ((event.code === 'Escape' || event.code === 'KeyE') && !event.repeat) {
+        event.preventDefault()
+        closeAndResume()
+      }
       if (event.key === 'ArrowLeft' && context) openPoster(context.previous)
       if (event.key === 'ArrowRight' && context) openPoster(context.next)
     }
@@ -30,16 +44,16 @@ export function ContentPanel() {
       removeEventListener('keydown', keyboard)
       returnFocus?.focus?.()
     }
-  }, [close, context, openPoster, poster])
+  }, [closeAndResume, context, openPoster, poster])
 
   if (!poster || !context) return null
   const { room, index, previous, next } = context
 
-  return <div className="panel-backdrop" onClick={close} role="presentation">
+  return <div className="panel-backdrop" onClick={closeAndResume} role="presentation">
     <article className="content-panel" onClick={(event) => event.stopPropagation()} aria-modal="true" role="dialog" aria-labelledby="panel-title">
       <header className="panel-header">
         <div className="panel-brand"><span>M</span><strong>Hồ sơ triển lãm</strong></div>
-        <button ref={closeButton} className="close-button" onClick={close} aria-label={uiText.close}>×</button>
+        <button ref={closeButton} className="close-button" onClick={closeAndResume} aria-label={`${uiText.close} và tiếp tục tham quan`}>×</button>
       </header>
 
       <div className="panel-layout">
@@ -58,6 +72,8 @@ export function ContentPanel() {
           </div>
         </div>
       </div>
+
+      {!mobile && <p className="panel-controls"><kbd>← →</kbd> chuyển tranh <span>·</span> <kbd>E / Esc</kbd> đóng và tiếp tục</p>}
 
       <footer className="panel-footer">
         <button onClick={() => openPoster(previous)}><i>←</i><span><small>Trước</small>{previous.title}</span></button>
