@@ -1,6 +1,18 @@
+<<<<<<< Updated upstream
 import { Text } from '@react-three/drei'
 import { useMemo } from 'react'
 import { Color } from 'three'
+=======
+import { Cloud, Clouds, Text } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
+import { useMemo, useRef } from 'react'
+import { Color, MeshBasicMaterial, type MeshStandardMaterial } from 'three'
+import { usePbrMaps } from '../hooks/usePbrMaps'
+import { getWaterBump } from '../utils/waterBump'
+import { ClothBanner } from './ClothBanner'
+import { EntranceDoor } from './EntranceDoor'
+import { InteractiveBench } from './InteractiveBench'
+>>>>>>> Stashed changes
 
 const stone = '#d8d0c2'
 const paleStone = '#e9e3d8'
@@ -29,18 +41,6 @@ function LampPost({ x, z }: { x: number; z: number }) {
     <mesh position={[0, 3.58, 0]} castShadow><cylinderGeometry args={[0.24, 0.19, 0.22, 12]} /><meshStandardMaterial color={charcoal} metalness={0.7} roughness={0.3} /></mesh>
     <mesh position={[0, 3.46, 0]}><cylinderGeometry args={[0.16, 0.16, 0.08, 12]} /><meshStandardMaterial color="#ffe9b0" emissive="#ffd47d" emissiveIntensity={2.5} /></mesh>
     <mesh position={[0, 0.09, 0]}><cylinderGeometry args={[0.22, 0.28, 0.18, 12]} /><meshStandardMaterial color={charcoal} /></mesh>
-  </group>
-}
-
-function Bench({ x, z, rotation = 0 }: { x: number; z: number; rotation?: number }) {
-  return <group position={[x, 0.48, z]} rotation={[0, rotation, 0]}>
-    {[ -0.42, -0.14, 0.14, 0.42 ].map((depth) => <mesh key={depth} position={[0, 0, depth]} castShadow>
-      <boxGeometry args={[2.6, 0.1, 0.19]} /><meshStandardMaterial color="#795235" roughness={0.72} />
-    </mesh>)}
-    {[-1.05, 1.05].map((side) => <group key={side} position={[side, -0.28, 0]}>
-      <mesh><boxGeometry args={[0.1, 0.56, 0.75]} /><meshStandardMaterial color={charcoal} metalness={0.72} roughness={0.38} /></mesh>
-      <mesh position={[0, 0.28, 0]}><boxGeometry args={[0.26, 0.08, 0.78]} /><meshStandardMaterial color={charcoal} /></mesh>
-    </group>)}
   </group>
 }
 
@@ -89,7 +89,7 @@ function EntranceGate() {
 function MuseumFacade() {
   const columns = [-20.2, -16.2, -12.2, -8.2, 8.2, 12.2, 16.2, 20.2]
   return <group>
-    <mesh position={[0, 0.38, 8.5]} receiveShadow><boxGeometry args={[44, 0.76, 1.6]} /><meshStandardMaterial color="#363532" roughness={0.72} /></mesh>
+    <mesh position={[0, 0.38, 8.5]} receiveShadow><boxGeometry args={[44, 0.76, 1.6]} /><meshStandardMaterial color="#c9c1b1" roughness={0.82} /></mesh>
     {[-14.7, 14.7].map((x) => <mesh key={x} position={[x, 5.15, 8.55]} castShadow receiveShadow>
       <boxGeometry args={[14.6, 9.55, 1.2]} /><meshStandardMaterial color={stone} roughness={0.86} />
     </mesh>)}
@@ -117,16 +117,19 @@ function MuseumFacade() {
     </Text>
     <Text position={[0, 7.5, 9.16]} fontSize={0.52} letterSpacing={0.3} color={red} anchorX="center" anchorY="middle">MLN131</Text>
     <Text position={[0, 5.83, 13.6]} fontSize={0.18} letterSpacing={0.2} color="#f6ecda" anchorX="center" anchorY="middle">LỐI VÀO  ·  ENTRANCE</Text>
+<<<<<<< Updated upstream
     {[-3.8, -1.95, 1.95, 3.8].map((x) => <mesh key={x} position={[x, 2.55, 9.28]}>
       <boxGeometry args={[1.72, 4.8, 0.12]} /><meshPhysicalMaterial color="#8ba4a8" roughness={0.08} metalness={0.12} transparent opacity={0.42} transmission={0.25} clearcoat={1} />
     </mesh>)}
+=======
+>>>>>>> Stashed changes
   </group>
 }
 
 function ArrivalDetails() {
   return <>
     {[-1, 1].flatMap((side) => [17, 25, 37].map((z) => <LampPost key={`${side}-${z}`} x={side * 7.2} z={z} />))}
-    <Bench x={-17} z={27} rotation={Math.PI / 2} /><Bench x={17} z={27} rotation={-Math.PI / 2} />
+    <InteractiveBench position={[-17, 0, 27]} rotation={Math.PI / 2} length={2.2} /><InteractiveBench position={[17, 0, 27]} rotation={-Math.PI / 2} length={2.2} />
     {[[-18, 18], [18, 18], [-19, 36], [19, 36]].map(([x, z], index) => <Tree key={index} x={x} z={z} scale={index > 1 ? 0.9 : 1} />)}
     {[-4.7, 4.7].flatMap((x) => [11, 13.1, 28.2].map((z) => <mesh key={`${x}-${z}`} position={[x, 0.38, z]} castShadow>
       <cylinderGeometry args={[0.1, 0.14, 0.76, 10]} /><meshStandardMaterial color={charcoal} metalness={0.66} roughness={0.36} />
@@ -150,6 +153,7 @@ export function Exterior() {
     <ReflectingPool x={-11.6} /><ReflectingPool x={11.6} />
     <EntranceGate />
     <MuseumFacade />
+    <EntranceDoor />
     <ArrivalDetails />
   </group>
 }

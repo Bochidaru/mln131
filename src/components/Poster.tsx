@@ -44,7 +44,14 @@ export function Poster({ data, position, rotationY = 0, lit = false }: {
   }, [data, focused, openPoster])
 
   useFrame(() => {
-    if (!artwork.current || useStore.getState().activePoster) return
+    const store = useStore.getState()
+    if (!artwork.current || store.activePoster || store.seated) {
+      if (focused) {
+        setFocused(false)
+        if (store.focusedPoster === data.id) setFocusedPoster(null)
+      }
+      return
+    }
     artwork.current.getWorldPosition(worldPosition)
     const closeEnough = camera.position.distanceToSquared(worldPosition) <= 12.25
     let next = false

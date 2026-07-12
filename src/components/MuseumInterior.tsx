@@ -3,6 +3,14 @@ import { useMemo } from 'react'
 import { Object3D } from 'three'
 import { rooms, type RoomData } from '../data/content'
 import { galleryLayouts, type GalleryLayout } from '../data/layout'
+<<<<<<< Updated upstream
+=======
+import { usePbrMaps } from '../hooks/usePbrMaps'
+import { ClothBanner } from './ClothBanner'
+import { DustMotes } from './DustMotes'
+import { FloorLines, type FloorLine } from './FloorLines'
+import { InteractiveBench } from './InteractiveBench'
+>>>>>>> Stashed changes
 import { Poster } from './Poster'
 
 const wall = '#e6e0d5'
@@ -25,13 +33,6 @@ function SpotFixture({ position, target }: { position: [number, number, number];
     <spotLight position={position} target={targetObject} color="#fff0d0" intensity={18} angle={0.34} penumbra={0.82} distance={9} decay={2} />
     <primitive object={targetObject} />
   </>
-}
-
-function MuseumBench({ position, rotation = 0, accent = bronze }: { position: [number, number, number]; rotation?: number; accent?: string }) {
-  return <group position={position} rotation={[0, rotation, 0]}>
-    <mesh position={[0, 0.48, 0]} castShadow><boxGeometry args={[3.1, 0.18, 0.92]} /><meshStandardMaterial color={accent} roughness={0.62} /></mesh>
-    {[-1.18, 1.18].map((x) => <mesh key={x} position={[x, 0.22, 0]} castShadow><boxGeometry args={[0.14, 0.48, 0.68]} /><meshStandardMaterial color={charcoal} metalness={0.62} roughness={0.35} /></mesh>)}
-  </group>
 }
 
 function GallerySign({ layout, room }: { layout: GalleryLayout; room: RoomData }) {
@@ -106,7 +107,7 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
     />)}
     <mesh position={[side === 'left' ? -17.8 : 17.8, 5.2, center.z]}><boxGeometry args={[0.12, 0.12, size.depth - 1.2]} /><meshStandardMaterial color={charcoal} metalness={0.62} roughness={0.34} /></mesh>
 
-    <MuseumBench position={[center.x + (side === 'left' ? 1.2 : -1.2), 0, center.z]} rotation={Math.PI / 2} accent={accent} />
+    <InteractiveBench position={[center.x + (side === 'left' ? 1.2 : -1.2), 0, center.z]} rotation={side === 'left' ? -Math.PI / 2 : Math.PI / 2} length={2.0} />
     <DisplayPlinth position={[center.x + (side === 'left' ? -4.7 : 4.7), 0, center.z + 5.9]} accent={accent} />
     <group position={[center.x + (side === 'left' ? 4.9 : -4.9), 0, center.z - 5.8]}>
       <mesh position={[0, .58, 0]} castShadow><boxGeometry args={[1.45, 1.16, 1.45]} /><meshStandardMaterial color="#d8d1c4" roughness={.72} /></mesh>
@@ -118,15 +119,39 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
     <group position={[side === 'left' ? -4.18 : 4.18, 0, center.z]}>
       {[-2.42, 2.42].map((zOffset) => <mesh key={zOffset} position={[0, 2.8, zOffset]} castShadow><boxGeometry args={[0.48, 5.6, 0.34]} /><meshStandardMaterial color={charcoal} roughness={0.56} /></mesh>)}
       <mesh position={[0, 5.28, 0]} castShadow><boxGeometry args={[0.48, 0.62, 5.15]} /><meshStandardMaterial color={charcoal} roughness={0.56} /></mesh>
-      <mesh position={[side === 'left' ? 0.26 : -0.26, 0.16, 0]}><boxGeometry args={[0.08, 0.32, 5]} /><meshStandardMaterial color={bronze} metalness={0.65} roughness={0.36} /></mesh>
     </group>
 
     <rectAreaLight position={[center.x, 5.25, center.z]} rotation={[-Math.PI / 2, 0, 0]} color="#fff4dc" intensity={2.6} width={7} height={2.2} />
   </group>
 }
 
+function Receptionist({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  const skin = '#c78e63'
+  const shirt = '#eef1f4'
+  const vest = '#2b2f37'
+  const trousers = '#22252b'
+  const hair = '#241d18'
+  return <group position={position} rotation={[0, rotation, 0]}>
+    {[-0.13, 0.13].map((x) => <mesh key={x} position={[x, 0.05, 0.05]} castShadow><boxGeometry args={[0.15, 0.1, 0.3]} /><meshStandardMaterial color="#17181c" roughness={0.5} /></mesh>)}
+    {[-0.13, 0.13].map((x) => <mesh key={x} position={[x, 0.5, 0]} castShadow><cylinderGeometry args={[0.1, 0.12, 0.9, 12]} /><meshStandardMaterial color={trousers} roughness={0.82} /></mesh>)}
+    <mesh position={[0, 0.98, 0]} castShadow><boxGeometry args={[0.38, 0.24, 0.24]} /><meshStandardMaterial color={trousers} roughness={0.82} /></mesh>
+    <mesh position={[0, 1.34, 0]} castShadow><cylinderGeometry args={[0.2, 0.24, 0.56, 14]} /><meshStandardMaterial color={shirt} roughness={0.68} /></mesh>
+    <mesh position={[0, 1.33, -0.01]} castShadow><cylinderGeometry args={[0.235, 0.255, 0.5, 14]} /><meshStandardMaterial color={vest} roughness={0.62} /></mesh>
+    <mesh position={[0, 1.4, 0.2]}><boxGeometry args={[0.03, 0.34, 0.01]} /><meshStandardMaterial color="#8f2f24" roughness={0.7} /></mesh>
+    <mesh position={[0, 1.2, 0.22]}><boxGeometry args={[0.12, 0.16, 0.01]} /><meshStandardMaterial color="#e9e2d2" roughness={0.6} /></mesh>
+    {[-1, 1].map((s) => <group key={s}>
+      <mesh position={[s * 0.28, 1.5, 0]} castShadow><sphereGeometry args={[0.1, 12, 10]} /><meshStandardMaterial color={vest} roughness={0.62} /></mesh>
+      <mesh position={[s * 0.3, 1.2, 0.02]} rotation={[0, 0, s * 0.12]} castShadow><cylinderGeometry args={[0.075, 0.08, 0.62, 12]} /><meshStandardMaterial color={vest} roughness={0.66} /></mesh>
+      <mesh position={[s * 0.34, 0.88, 0.05]} castShadow><sphereGeometry args={[0.07, 10, 8]} /><meshStandardMaterial color={skin} roughness={0.7} /></mesh>
+    </group>)}
+    <mesh position={[0, 1.66, 0]} castShadow><cylinderGeometry args={[0.06, 0.07, 0.1, 10]} /><meshStandardMaterial color={skin} roughness={0.7} /></mesh>
+    <mesh position={[0, 1.78, 0]} castShadow><sphereGeometry args={[0.13, 18, 16]} /><meshStandardMaterial color={skin} roughness={0.68} /></mesh>
+    <mesh position={[0, 1.83, -0.02]} castShadow><sphereGeometry args={[0.142, 16, 14, 0, Math.PI * 2, 0, Math.PI * 0.62]} /><meshStandardMaterial color={hair} roughness={0.85} /></mesh>
+  </group>
+}
+
 function ReceptionDesk() {
-  return <group position={[-5.2, 0, -4.5]}>
+  return <group position={[-6.3, 0, -9.4]}>
     <mesh position={[0, 0.62, 0]} castShadow receiveShadow><boxGeometry args={[4, 1.22, 1.3]} /><meshStandardMaterial color="#4d4238" roughness={0.58} /></mesh>
     <mesh position={[0, 1.27, 0]} castShadow><boxGeometry args={[4.18, 0.1, 1.5]} /><meshStandardMaterial color={bronze} metalness={0.48} roughness={0.34} /></mesh>
     <Text position={[0, 0.68, 0.67]} fontSize={0.18} letterSpacing={0.17} color="#eee4d2">THÔNG TIN  ·  INFORMATION</Text>
@@ -181,9 +206,9 @@ function Lobby() {
     {[-4.25, 0, 4.25].map((x) => <mesh key={x} position={[x, 8.63, -2]}><boxGeometry args={[0.1, 0.12, 9.1]} /><meshStandardMaterial color={charcoal} metalness={0.72} roughness={0.3} /></mesh>)}
     {[-9.8, 9.8].map((x) => <mesh key={x} position={[x, 0.23, -1]}><boxGeometry args={[0.16, 0.3, 19.5]} /><meshStandardMaterial color={charcoal} roughness={0.64} /></mesh>)}
 
-    <ReceptionDesk /><LobbySculpture />
-    <MuseumBench position={[6.2, 0, -5.8]} accent="#6c5948" />
-    <MuseumBench position={[6.2, 0, -7.3]} accent="#6c5948" />
+    <ReceptionDesk /><Receptionist position={[-6.3, 0, -10.45]} /><LobbySculpture />
+    <InteractiveBench position={[6.2, 0, -5.9]} length={2.1} />
+    <InteractiveBench position={[6.2, 0, -7.7]} length={2.1} />
 
     <mesh position={[0, 5.18, -10.84]}><boxGeometry args={[7.7, 2.65, .08]} /><meshStandardMaterial color="#30322f" roughness={.62} /></mesh>
     <Text position={[0, 6.05, -10.78]} fontSize={0.48} letterSpacing={0.08} color="#eee6d9">HÀNH TRÌNH TRI THỨC</Text>
@@ -214,7 +239,6 @@ function CentralCorridor() {
       </group>
     }))}
     {galleryLayouts.map((layout) => <group key={layout.roomId}>
-      <mesh position={[0, 0.11, layout.center.z]}><boxGeometry args={[8.1, 0.03, 0.045]} /><meshStandardMaterial color="#6e675e" roughness={0.9} /></mesh>
       <Text position={[layout.side === 'left' ? -3.8 : 3.8, 1.35, layout.center.z + 3.25]} rotation={[0, layout.side === 'left' ? Math.PI / 2 : -Math.PI / 2, 0]} fontSize={0.11} letterSpacing={0.12} color={layout.accent}>PHÒNG {String(layout.roomId).padStart(2, '0')}</Text>
     </group>)}
     {[-21, -42, -63, -82].map((z, index) => <group key={`wayfinding-${z}`} position={[0, 4.82, z + 5.4]}>
