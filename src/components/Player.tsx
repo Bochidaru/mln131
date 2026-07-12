@@ -2,6 +2,7 @@ import { PointerLockControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Euler, Vector3 } from 'three'
+import type { PointerLockControls as PointerLockControlsImpl } from 'three-stdlib'
 import { museumAudio } from '../audio'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { resolvePlayerMovement } from '../hooks/useCollision'
@@ -13,6 +14,9 @@ const displacement = new Vector3()
 const forward = new Vector3()
 const right = new Vector3()
 const euler = new Euler(0, 0, 0, 'YXZ')
+const eyeHeight = 1.68
+const jumpSpeed = 5
+const gravity = 14
 
 const SEAT_RANGE_SQ = 2.2 * 2.2
 
@@ -28,6 +32,9 @@ const deepLinks: Record<string, { position: [number, number, number]; target: [n
 export function Player() {
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
+  const controls = useRef<PointerLockControlsImpl>(null)
+  const verticalVelocity = useRef(0)
+  const jumping = useRef(false)
   const lastPoseUpdate = useRef(0)
   const walkPhase = useRef(0)
   const focusedSeatId = useRef<string | null>(null)
@@ -44,7 +51,17 @@ export function Player() {
     camera.lookAt(...(start?.target ?? [0, 5.2, 4]))
 
     const down = (event: KeyboardEvent) => {
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault()
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyQ', 'Space'].includes(event.code)) event.preventDefault()
+
+      const store = useStore.getState()
+      if (event.code === 'KeyQ' && !event.repeat && store.entered && !store.activePoster) {
+        if (controls.current?.isLocked) controls.current.unlock()
+        else controls.current?.lock()
+      }
+      if (event.code === 'Space' && !event.repeat && store.controlsLocked && !jumping.current) {
+        jumping.current = true
+        verticalVelocity.current = jumpSpeed
+      }
       keys.current.add(event.code)
     }
     const up = (event: KeyboardEvent) => keys.current.delete(event.code)
@@ -94,6 +111,11 @@ export function Player() {
     forward.normalize()
 
     if (!entered || activePoster) {
+      if (activePoster && jumping.current) {
+        frameCamera.position.y = eyeHeight
+        verticalVelocity.current = 0
+        jumping.current = false
+      }
       if (state.clock.elapsedTime - lastPoseUpdate.current > 0.12) {
         store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirZ: forward.z })
         lastPoseUpdate.current = state.clock.elapsedTime
@@ -143,15 +165,29 @@ export function Player() {
     right.crossVectors(forward, frameCamera.up).normalize()
     direction.addScaledVector(forward, zInput).addScaledVector(right, xInput)
 
+    const isJumping = jumping.current
+
     if (direction.lengthSq() > 0) {
       const speed = keys.current.has('ShiftLeft') || keys.current.has('ShiftRight') ? 4.35 : 2.65
       displacement.copy(direction).normalize().multiplyScalar(cappedDelta * speed)
+      const verticalPosition = frameCamera.position.y
       resolvePlayerMovement(frameCamera.position, displacement)
+      if (isJumping) frameCamera.position.y = verticalPosition
       walkPhase.current += cappedDelta * speed * 3.2
-      frameCamera.position.y = 1.68 + Math.sin(walkPhase.current) * 0.018
+      if (!isJumping) frameCamera.position.y = eyeHeight + Math.sin(walkPhase.current) * 0.018
       museumAudio.step(performance.now() / 1000)
-    } else {
-      frameCamera.position.y += (1.68 - frameCamera.position.y) * Math.min(1, cappedDelta * 10)
+    } else if (!isJumping) {
+      frameCamera.position.y += (eyeHeight - frameCamera.position.y) * Math.min(1, cappedDelta * 10)
+    }
+
+    if (isJumping) {
+      verticalVelocity.current -= gravity * cappedDelta
+      frameCamera.position.y += verticalVelocity.current * cappedDelta
+      if (frameCamera.position.y <= eyeHeight) {
+        frameCamera.position.y = eyeHeight
+        verticalVelocity.current = 0
+        jumping.current = false
+      }
     }
 
     if (mobile && (store.mobileLook.x || store.mobileLook.y)) {
@@ -169,6 +205,6 @@ export function Player() {
     }
   })
 
-  if (mobile || !entered || activePoster) return null
-  return <PointerLockControls makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => setControlsLocked(false)} />
+  if (mobile || !entered) return null
+  return <PointerLockControls ref={controls} selector={activePoster ? '#pointer-lock-disabled' : '#museum-canvas'} makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => setControlsLocked(false)} />
 }

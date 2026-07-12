@@ -187,6 +187,9 @@ kbd { font: inherit; }
 .panel-copy ul { margin: 0; padding: 0; list-style: none; }
 .panel-copy li { position: relative; padding: 10px 0 10px 24px; color: #30332f; font-size: 11px; line-height: 1.55; border-bottom: 1px solid rgba(30,33,31,.1); }
 .panel-copy li::before { content: ''; position: absolute; left: 2px; top: 16px; width: 6px; height: 6px; border: 1px solid var(--red); transform: rotate(45deg); }
+.panel-controls { margin: 0; padding: 9px 20px; color: #71685e; border-top: 1px solid rgba(30,33,31,.12); font-size: 7px; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.panel-controls kbd { padding: 2px 5px; color: var(--ink); border: 1px solid rgba(30,33,31,.25); background: rgba(255,255,255,.24); font: inherit; }
+.panel-controls span { margin: 0 5px; color: rgba(30,33,31,.35); }
 .panel-footer { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid rgba(30,33,31,.18); }
 .panel-footer button { min-height: 66px; padding: 12px 20px; display: flex; align-items: center; gap: 14px; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
 .panel-footer button + button { justify-content: flex-end; border-left: 1px solid rgba(30,33,31,.18); text-align: right; }

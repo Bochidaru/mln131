@@ -45,7 +45,7 @@ export function HUD() {
     {!mobile && !locked && <div className="lock-hint">
       <span className="mouse-icon" aria-hidden="true" />
       <strong>Nhấp vào không gian để điều khiển</strong>
-      <small>WASD di chuyển · Chuột quan sát · ESC thả chuột</small>
+      <small>WASD di chuyển · Chuột quan sát · Q bật/tắt điều khiển · Space nhảy</small>
     </div>}
 
     <div className="tour-progress" aria-label={`Đã khám phá ${visited.filter((id) => id > 0).length} trên 8 phòng`}>

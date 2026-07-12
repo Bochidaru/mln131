@@ -1,6 +1,6 @@
-import { Loader, Sky } from '@react-three/drei'
+import { BakeShadows, Environment, Loader, Sky } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
+import { Bloom, EffectComposer, Noise, SMAA, Vignette } from '@react-three/postprocessing'
 import { Suspense } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap, SRGBColorSpace } from 'three'
 import { AudioController } from './AudioController'
@@ -18,22 +18,22 @@ export function MuseumScene() {
       id="museum-canvas"
       camera={{ fov: 58, near: 0.08, far: 190 }}
       dpr={[1, 1.65]}
-      gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
+      gl={{ antialias: false, powerPreference: 'high-performance', alpha: false }}
       shadows={{ type: PCFSoftShadowMap }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.08
+        gl.toneMappingExposure = 1.12
         gl.outputColorSpace = SRGBColorSpace
       }}>
-      <color attach="background" args={['#a9c1cb']} />
-      <fog attach="fog" args={['#b8c8cc', 92, 175]} />
-      <Sky distance={450000} sunPosition={[70, 32, 55]} turbidity={4.8} rayleigh={1.7} mieCoefficient={0.006} mieDirectionalG={0.84} />
-      <hemisphereLight args={['#dcefff', '#62594b', 1.25]} />
-      <ambientLight color="#fff1dc" intensity={0.28} />
+      <color attach="background" args={['#b7c2b6']} />
+      <fog attach="fog" args={['#c2c6b6', 92, 175]} />
+      <Sky distance={450000} sunPosition={[64, 22, 48]} turbidity={5.4} rayleigh={2.1} mieCoefficient={0.008} mieDirectionalG={0.86} />
+      <hemisphereLight args={['#dcecff', '#5f574a', 1.05]} />
+      <ambientLight color="#fff1dc" intensity={0.22} />
       <directionalLight
-        position={[24, 36, 30]}
-        color="#fff4dc"
-        intensity={2.65}
+        position={[30, 22, 26]}
+        color="#ffdcab"
+        intensity={2.85}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -50,11 +50,15 @@ export function MuseumScene() {
       <Suspense fallback={null}>
         <Exterior />
         <MuseumInterior />
+        <Environment files="/textures/env.hdr" environmentIntensity={0.42} />
+        <BakeShadows />
       </Suspense>
       <Player />
       <EffectComposer multisampling={0}>
+        <SMAA />
         <Bloom intensity={0.18} luminanceThreshold={1.15} luminanceSmoothing={0.5} mipmapBlur />
         <Vignette eskil={false} offset={0.28} darkness={0.24} />
+        <Noise opacity={0.028} />
       </EffectComposer>
     </Canvas>
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
