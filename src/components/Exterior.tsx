@@ -1,6 +1,10 @@
-import { Text } from '@react-three/drei'
-import { useMemo } from 'react'
-import { Color } from 'three'
+import { Cloud, Clouds, Text } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
+import { useMemo, useRef } from 'react'
+import { Color, MeshBasicMaterial, type MeshStandardMaterial } from 'three'
+import { usePbrMaps } from '../hooks/usePbrMaps'
+import { getWaterBump } from '../utils/waterBump'
+import { ClothBanner } from './ClothBanner'
 
 const stone = '#d8d0c2'
 const paleStone = '#e9e3d8'
@@ -45,9 +49,18 @@ function Bench({ x, z, rotation = 0 }: { x: number; z: number; rotation?: number
 }
 
 function ReflectingPool({ x }: { x: number }) {
+  const water = useRef<MeshStandardMaterial>(null)
+  // Both pools share the bump texture, so each advances it at half speed.
+  useFrame((_, delta) => {
+    const bump = water.current?.bumpMap
+    if (bump) {
+      bump.offset.x += delta * 0.004
+      bump.offset.y += delta * 0.007
+    }
+  })
   return <group position={[x, 0, 20]}>
     <mesh position={[0, 0.08, 0]} receiveShadow><boxGeometry args={[7.1, 0.16, 10.8]} /><meshStandardMaterial color="#aca79b" roughness={0.9} /></mesh>
-    <mesh position={[0, 0.17, 0]}><boxGeometry args={[6.72, 0.06, 10.42]} /><meshPhysicalMaterial color="#4b7580" roughness={0.12} metalness={0.08} transparent opacity={0.88} clearcoat={1} clearcoatRoughness={0.08} /></mesh>
+    <mesh position={[0, 0.17, 0]}><boxGeometry args={[6.72, 0.06, 10.42]} /><meshStandardMaterial ref={water} color="#41707c" roughness={0.06} metalness={0.12} bumpMap={getWaterBump()} bumpScale={2.2} transparent opacity={0.93} /></mesh>
     {[-3.45, 3.45].map((edge) => <mesh key={edge} position={[edge, 0.28, 0]} castShadow><boxGeometry args={[0.18, 0.38, 11]} /><meshStandardMaterial color={paleStone} roughness={0.78} /></mesh>)}
     {[-5.35, 5.35].map((edge) => <mesh key={edge} position={[0, 0.28, edge]} castShadow><boxGeometry args={[7.1, 0.38, 0.18]} /><meshStandardMaterial color={paleStone} roughness={0.78} /></mesh>)}
     {[-2.1, 0, 2.1].map((offset) => <mesh key={offset} position={[0, 0.34, offset]}>
@@ -83,6 +96,11 @@ function EntranceGate() {
     <mesh position={[0, 4.62, 31]} castShadow><boxGeometry args={[15.5, 0.72, 0.82]} /><meshStandardMaterial color={charcoal} metalness={0.2} roughness={0.58} /></mesh>
     <Text position={[0, 4.65, 31.44]} fontSize={0.38} letterSpacing={0.11} color="#f0e8d9" anchorX="center" anchorY="middle">BẢO TÀNG TRI THỨC  ·  MLN131</Text>
     <OpenGatePanel side={-1} /><OpenGatePanel side={1} />
+    {[-1, 1].map((side) => <group key={side} position={[side * 7.4, 0, 31]}>
+      <mesh position={[0, 5.55, 0]} castShadow><cylinderGeometry args={[0.045, 0.065, 2.9, 8]} /><meshStandardMaterial color={charcoal} metalness={0.75} roughness={0.3} /></mesh>
+      <mesh position={[0, 7.02, 0]}><sphereGeometry args={[0.09, 10, 8]} /><meshStandardMaterial color={bronze} metalness={0.85} roughness={0.25} /></mesh>
+      <ClothBanner pinned="left" width={2.1} height={1.25} color="#a3271c" amplitude={0.16} speed={1.6} position={[1.1, 6.3, 0]} />
+    </group>)}
   </group>
 }
 
@@ -94,8 +112,9 @@ function MuseumFacade() {
       <boxGeometry args={[14.6, 9.55, 1.2]} /><meshStandardMaterial color={stone} roughness={0.86} />
     </mesh>)}
     <mesh position={[0, 8.15, 8.5]} castShadow><boxGeometry args={[14.8, 3.55, 1.2]} /><meshStandardMaterial color={paleStone} roughness={0.82} /></mesh>
-    <mesh position={[0, 4.35, 8.66]} receiveShadow><boxGeometry args={[14.2, 6.65, 0.4]} /><meshPhysicalMaterial color="#76939a" metalness={0.08} roughness={0.12} transmission={0.15} transparent opacity={0.72} clearcoat={0.85} /></mesh>
-    {[-5.35, -2.68, 0, 2.68, 5.35].map((x) => <mesh key={x} position={[x, 4.35, 8.93]} castShadow>
+    {[-4.35, 4.35].map((x) => <mesh key={x} position={[x, 4.35, 8.66]} receiveShadow><boxGeometry args={[5.5, 6.65, 0.4]} /><meshPhysicalMaterial color="#9fb6bb" metalness={0.08} roughness={0.1} transparent opacity={0.4} clearcoat={0.85} /></mesh>)}
+    <mesh position={[0, 5.94, 8.66]} receiveShadow><boxGeometry args={[3.2, 3.47, 0.4]} /><meshPhysicalMaterial color="#9fb6bb" metalness={0.08} roughness={0.1} transparent opacity={0.4} clearcoat={0.85} /></mesh>
+    {[-5.35, -3.5, -1.6, 1.6, 3.5, 5.35].map((x) => <mesh key={x} position={[x, 4.35, 8.93]} castShadow>
       <boxGeometry args={[0.09, 6.6, 0.12]} /><meshStandardMaterial color="#353b3b" metalness={0.82} roughness={0.25} />
     </mesh>)}
     <mesh position={[0, 6.2, 11]} castShadow><boxGeometry args={[11.5, 0.28, 5.2]} /><meshStandardMaterial color={bronze} metalness={0.62} roughness={0.32} /></mesh>
@@ -118,7 +137,7 @@ function MuseumFacade() {
     <Text position={[0, 7.5, 9.16]} fontSize={0.52} letterSpacing={0.3} color={red} anchorX="center" anchorY="middle">MLN131</Text>
     <Text position={[0, 5.83, 13.6]} fontSize={0.18} letterSpacing={0.2} color="#f6ecda" anchorX="center" anchorY="middle">LỐI VÀO  ·  ENTRANCE</Text>
     {[-3.8, -1.95, 1.95, 3.8].map((x) => <mesh key={x} position={[x, 2.55, 9.28]}>
-      <boxGeometry args={[1.72, 4.8, 0.12]} /><meshPhysicalMaterial color="#8ba4a8" roughness={0.08} metalness={0.12} transparent opacity={0.42} transmission={0.25} clearcoat={1} />
+      <boxGeometry args={[1.72, 4.8, 0.12]} /><meshPhysicalMaterial color="#8ba4a8" roughness={0.08} metalness={0.12} transparent opacity={0.45} clearcoat={1} />
     </mesh>)}
   </group>
 }
@@ -141,15 +160,22 @@ function ArrivalDetails() {
 }
 
 export function Exterior() {
+  const grass = usePbrMaps('grass', 30, 30)
+  const paving = usePbrMaps('paving', 9, 8.6)
+  const pavingPath = usePbrMaps('paving', 2, 8.6)
+
   return <group>
-    <mesh position={[0, -0.16, -14]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[140, 140]} /><meshStandardMaterial color="#53674b" roughness={1} /></mesh>
-    <mesh position={[0, -0.04, 25]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[44, 42]} /><meshStandardMaterial color="#bcb5a8" roughness={0.9} /></mesh>
-    <mesh position={[0, -0.01, 25]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[9.5, 42]} /><meshStandardMaterial color="#ded7ca" roughness={0.78} /></mesh>
-    {[-4.75, 4.75].map((x) => <mesh key={x} position={[x, 0.015, 25]}><boxGeometry args={[0.045, 0.025, 42]} /><meshStandardMaterial color="#aaa397" roughness={0.9} /></mesh>)}
-    {Array.from({ length: 18 }, (_, index) => 5 + index * 2.35).map((z) => <mesh key={z} position={[0, 0.012, z]}><boxGeometry args={[43.5, 0.02, 0.035]} /><meshStandardMaterial color="#9c968b" roughness={1} /></mesh>)}
+    <mesh position={[0, -0.16, -14]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[140, 140]} /><meshStandardMaterial {...grass} color="#c9cfba" roughness={1} /></mesh>
+    <mesh position={[0, -0.04, 25]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[44, 42]} /><meshStandardMaterial {...paving} color="#d8d2c5" roughness={1} /></mesh>
+    <mesh position={[0, -0.01, 25]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[9.5, 42]} /><meshStandardMaterial {...pavingPath} color="#efe8d8" roughness={1} /></mesh>
     <ReflectingPool x={-11.6} /><ReflectingPool x={11.6} />
     <EntranceGate />
     <MuseumFacade />
     <ArrivalDetails />
+    <Clouds material={MeshBasicMaterial} limit={140}>
+      <Cloud seed={4} segments={14} bounds={[16, 3, 7]} volume={10} color="#f6efe2" opacity={0.5} speed={0.1} fade={25} position={[-38, 46, -18]} />
+      <Cloud seed={9} segments={12} bounds={[13, 3, 6]} volume={9} color="#f3ede2" opacity={0.45} speed={0.08} fade={25} position={[26, 52, 26]} />
+      <Cloud seed={14} segments={12} bounds={[18, 4, 7]} volume={11} color="#f6f0e4" opacity={0.4} speed={0.12} fade={25} position={[8, 56, -66]} />
+    </Clouds>
   </group>
 }

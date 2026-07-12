@@ -1,8 +1,13 @@
-import { Text } from '@react-three/drei'
-import { useMemo } from 'react'
-import { Object3D } from 'three'
+import { MeshReflectorMaterial, Text } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
+import { useMemo, useRef, type ReactNode } from 'react'
+import { Group, Object3D } from 'three'
 import { rooms, type RoomData } from '../data/content'
 import { galleryLayouts, type GalleryLayout } from '../data/layout'
+import { usePbrMaps } from '../hooks/usePbrMaps'
+import { ClothBanner } from './ClothBanner'
+import { DustMotes } from './DustMotes'
+import { FloorLines, type FloorLine } from './FloorLines'
 import { Poster } from './Poster'
 
 const wall = '#e6e0d5'
@@ -11,10 +16,26 @@ const charcoal = '#292a28'
 const bronze = '#8f7045'
 
 function Wall({ position, size, color = wall }: { position: [number, number, number]; size: [number, number, number]; color?: string }) {
-  return <mesh position={position} castShadow receiveShadow><boxGeometry args={size} /><meshStandardMaterial color={color} roughness={0.86} /></mesh>
+  const plaster = usePbrMaps('plaster', 3, 1.6)
+  return <mesh position={position} castShadow receiveShadow><boxGeometry args={size} /><meshStandardMaterial {...plaster} color={color} roughness={1} normalScale={[0.45, 0.45]} /></mesh>
 }
 
-function SpotFixture({ position, target }: { position: [number, number, number]; target: [number, number, number] }) {
+function Turntable({ position, speed = 0.35, children }: { position: [number, number, number]; speed?: number; children: ReactNode }) {
+  const group = useRef<Group>(null)
+  useFrame((_, delta) => {
+    if (group.current) group.current.rotation.y += delta * speed
+  })
+  return <group ref={group} position={position}>{children}</group>
+}
+
+function SpotFixture({ position, target, light = true, angle = 0.34, intensity = 18, distance = 9 }: {
+  position: [number, number, number]
+  target: [number, number, number]
+  light?: boolean
+  angle?: number
+  intensity?: number
+  distance?: number
+}) {
   const targetObject = useMemo(() => {
     const object = new Object3D()
     object.position.set(...target)
@@ -22,8 +43,10 @@ function SpotFixture({ position, target }: { position: [number, number, number];
   }, [target])
   return <>
     <mesh position={position} castShadow><cylinderGeometry args={[0.09, 0.13, 0.24, 10]} /><meshStandardMaterial color={charcoal} metalness={0.72} roughness={0.3} /></mesh>
-    <spotLight position={position} target={targetObject} color="#fff0d0" intensity={18} angle={0.34} penumbra={0.82} distance={9} decay={2} />
-    <primitive object={targetObject} />
+    {light && <>
+      <spotLight position={position} target={targetObject} color="#fff0d0" intensity={intensity} angle={angle} penumbra={0.82} distance={distance} decay={2} />
+      <primitive object={targetObject} />
+    </>}
   </>
 }
 
@@ -48,19 +71,19 @@ function GallerySign({ layout, room }: { layout: GalleryLayout; room: RoomData }
 
 function GalleryFloor({ layout }: { layout: GalleryLayout }) {
   const { center, size } = layout
-  return <group>
-    <mesh position={[center.x, 0, center.z]} receiveShadow><boxGeometry args={[size.width, 0.16, size.depth]} /><meshStandardMaterial color="#8c735c" roughness={0.74} /></mesh>
-    {Array.from({ length: 11 }, (_, index) => center.x - size.width / 2 + 0.8 + index * 1.5).map((x) => <mesh key={x} position={[x, 0.09, center.z]}>
-      <boxGeometry args={[0.018, 0.01, size.depth - 0.15]} /><meshStandardMaterial color="#5f4d3e" roughness={0.95} /></mesh>)}
-    {Array.from({ length: 9 }, (_, index) => center.z - size.depth / 2 + 1 + index * 2).map((z) => <mesh key={z} position={[center.x, 0.095, z]}>
-      <boxGeometry args={[size.width - 0.12, 0.01, 0.018]} /><meshStandardMaterial color="#9d846d" roughness={0.9} /></mesh>)}
-  </group>
+  const wood = usePbrMaps('wood', 2.2, 4.4)
+  return <mesh position={[center.x, 0, center.z]} receiveShadow>
+    <boxGeometry args={[size.width, 0.16, size.depth]} />
+    <meshStandardMaterial {...wood} roughness={1} />
+  </mesh>
 }
 
 function DisplayPlinth({ position, accent }: { position: [number, number, number]; accent: string }) {
   return <group position={position}>
     <mesh position={[0, 0.55, 0]} castShadow receiveShadow><boxGeometry args={[1.05, 1.1, 1.05]} /><meshStandardMaterial color="#d8d1c4" roughness={0.72} /></mesh>
-    <mesh position={[0, 1.36, 0]} castShadow rotation={[0.35, 0.45, 0.2]}><octahedronGeometry args={[0.58, 0]} /><meshStandardMaterial color={accent} metalness={0.48} roughness={0.38} /></mesh>
+    <Turntable position={[0, 1.36, 0]} speed={0.4}>
+      <mesh castShadow rotation={[0.35, 0, 0.2]}><octahedronGeometry args={[0.58, 0]} /><meshStandardMaterial color={accent} metalness={0.48} roughness={0.38} /></mesh>
+    </Turntable>
     <mesh position={[0, 1.88, 0]}><cylinderGeometry args={[0.035, 0.035, 0.38, 8]} /><meshStandardMaterial color={bronze} metalness={0.7} /></mesh>
   </group>
 }
@@ -99,10 +122,14 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
       rotationY={posterRotation}
     />)}
 
-    {offsets.map((offset) => <SpotFixture
+    {offsets.map((offset, index) => <SpotFixture
       key={offset}
       position={[side === 'left' ? -17.8 : 17.8, 5.12, center.z + offset]}
       target={[outerX, 2.35, center.z + offset]}
+      light={index === Math.floor((offsets.length - 1) / 2)}
+      angle={offsets.length > 1 ? 0.92 : 0.4}
+      intensity={offsets.length > 1 ? 30 : 20}
+      distance={12}
     />)}
     <mesh position={[side === 'left' ? -17.8 : 17.8, 5.2, center.z]}><boxGeometry args={[0.12, 0.12, size.depth - 1.2]} /><meshStandardMaterial color={charcoal} metalness={0.62} roughness={0.34} /></mesh>
 
@@ -110,9 +137,12 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
     <DisplayPlinth position={[center.x + (side === 'left' ? -4.7 : 4.7), 0, center.z + 5.9]} accent={accent} />
     <group position={[center.x + (side === 'left' ? 4.9 : -4.9), 0, center.z - 5.8]}>
       <mesh position={[0, .58, 0]} castShadow><boxGeometry args={[1.45, 1.16, 1.45]} /><meshStandardMaterial color="#d8d1c4" roughness={.72} /></mesh>
-      <mesh position={[0, 1.62, 0]} castShadow><boxGeometry args={[1.58, .95, 1.58]} /><meshPhysicalMaterial color="#a4c0c3" transparent opacity={.25} transmission={.32} roughness={.08} metalness={.05} /></mesh>
-      <mesh position={[0, 1.43, 0]} castShadow rotation={[.3,.5,.1]}><dodecahedronGeometry args={[.36,0]} /><meshStandardMaterial color={accent} metalness={.4} roughness={.38} /></mesh>
+      <mesh position={[0, 1.62, 0]} castShadow><boxGeometry args={[1.58, .95, 1.58]} /><meshPhysicalMaterial color="#a4c0c3" transparent opacity={.3} clearcoat={.6} roughness={.08} metalness={.05} /></mesh>
+      <Turntable position={[0, 1.43, 0]} speed={0.3}>
+        <mesh castShadow rotation={[.3, 0, .1]}><dodecahedronGeometry args={[.36,0]} /><meshStandardMaterial color={accent} metalness={.4} roughness={.38} /></mesh>
+      </Turntable>
     </group>
+    <DustMotes position={[center.x, 2.5, center.z]} bounds={[13, 4.2, 14.5]} count={50} />
     <GallerySign layout={layout} room={room} />
 
     <group position={[side === 'left' ? -4.18 : 4.18, 0, center.z]}>
@@ -121,7 +151,7 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
       <mesh position={[side === 'left' ? 0.26 : -0.26, 0.16, 0]}><boxGeometry args={[0.08, 0.32, 5]} /><meshStandardMaterial color={bronze} metalness={0.65} roughness={0.36} /></mesh>
     </group>
 
-    <rectAreaLight position={[center.x, 5.25, center.z]} rotation={[-Math.PI / 2, 0, 0]} color="#fff4dc" intensity={2.6} width={7} height={2.2} />
+    <pointLight position={[center.x, 4.9, center.z]} color="#fff4dc" intensity={7} distance={11} decay={2} />
   </group>
 }
 
@@ -166,18 +196,44 @@ function DirectoryKiosk() {
   </group>
 }
 
+const lobbyFloorLines: FloorLine[] = [
+  ...Array.from({ length: 11 }, (_, index): FloorLine => ({
+    position: [-12.5 + index * 2.5, 0.1, -1], scale: [0.018, 0.012, 19.8], color: '#8f897f',
+  })),
+  ...Array.from({ length: 9 }, (_, index): FloorLine => ({
+    position: [0, 0.105, -10 + index * 2.5], scale: [25.8, 0.012, 0.018], color: '#d6cec0',
+  })),
+]
+
 function Lobby() {
   const room = rooms[0]
+  const marble = usePbrMaps('marble', 4, 3.2)
   return <group>
     <mesh position={[0, 0, -1]} receiveShadow><boxGeometry args={[26, 0.18, 20]} /><meshStandardMaterial color={floorStone} roughness={0.55} metalness={0.04} /></mesh>
-    {Array.from({ length: 11 }, (_, index) => -12.5 + index * 2.5).map((x) => <mesh key={x} position={[x, 0.1, -1]}><boxGeometry args={[0.018, 0.012, 19.8]} /><meshStandardMaterial color="#8f897f" roughness={0.9} /></mesh>)}
-    {Array.from({ length: 9 }, (_, index) => -10 + index * 2.5).map((z) => <mesh key={z} position={[0, 0.105, z]}><boxGeometry args={[25.8, 0.012, 0.018]} /><meshStandardMaterial color="#d6cec0" roughness={0.9} /></mesh>)}
+    <mesh position={[0, 0.095, -1]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <planeGeometry args={[26, 20]} />
+      <MeshReflectorMaterial
+        {...marble}
+        color="#d9ccb8"
+        resolution={512}
+        mirror={0.45}
+        mixBlur={1}
+        mixStrength={0.6}
+        blur={[280, 90]}
+        depthScale={0.4}
+        minDepthThreshold={0.85}
+        maxDepthThreshold={1.2}
+        metalness={0.02}
+        roughness={1}
+      />
+    </mesh>
+    <FloorLines lines={lobbyFloorLines} />
     <Wall position={[-13.15, 4.4, -1]} size={[0.3, 8.8, 20.2]} />
     <Wall position={[13.15, 4.4, -1]} size={[0.3, 8.8, 20.2]} />
     <Wall position={[-8.6, 4.4, -11.05]} size={[9.2, 8.8, 0.3]} />
     <Wall position={[8.6, 4.4, -11.05]} size={[9.2, 8.8, 0.3]} />
     <Wall position={[0, 8.85, -1]} size={[26.2, 0.22, 20.2]} color="#cbc6bd" />
-    <mesh position={[0, 8.72, -2]}><boxGeometry args={[8.5, 0.08, 9]} /><meshPhysicalMaterial color="#9bb9bd" transparent opacity={0.5} transmission={0.18} roughness={0.12} metalness={0.08} /></mesh>
+    <mesh position={[0, 8.72, -2]}><boxGeometry args={[8.5, 0.08, 9]} /><meshPhysicalMaterial color="#9bb9bd" transparent opacity={0.48} clearcoat={0.5} roughness={0.12} metalness={0.08} /></mesh>
     {[-4.25, 0, 4.25].map((x) => <mesh key={x} position={[x, 8.63, -2]}><boxGeometry args={[0.1, 0.12, 9.1]} /><meshStandardMaterial color={charcoal} metalness={0.72} roughness={0.3} /></mesh>)}
     {[-9.8, 9.8].map((x) => <mesh key={x} position={[x, 0.23, -1]}><boxGeometry args={[0.16, 0.3, 19.5]} /><meshStandardMaterial color={charcoal} roughness={0.64} /></mesh>)}
 
@@ -192,18 +248,26 @@ function Lobby() {
     <DirectoryKiosk />
     <IndoorPlanter x={-10.2} z={5.1} /><IndoorPlanter x={10.2} z={5.1} />
 
+    {[{ x: -6.5, color: '#8f2f24' }, { x: 6.5, color: '#8b6a32' }].map(({ x, color }) => <group key={x} position={[x, 0, -8.4]}>
+      <mesh position={[0, 8.6, 0]} castShadow><boxGeometry args={[1.7, 0.07, 0.07]} /><meshStandardMaterial color={charcoal} metalness={0.6} roughness={0.4} /></mesh>
+      <ClothBanner pinned="top" width={1.5} height={3.2} color={color} amplitude={0.055} speed={0.8} position={[0, 6.95, 0]} />
+    </group>)}
+    <DustMotes position={[0, 3.6, -1]} bounds={[22, 6, 17]} count={70} />
+
     <Poster data={room.posters[0]} position={[-12.9, 2.7, -2.1]} rotationY={Math.PI / 2} />
     <Poster data={room.posters[1]} position={[12.9, 2.7, -2.1]} rotationY={-Math.PI / 2} />
     <SpotFixture position={[-10.1, 6.9, -2.1]} target={[-12.8, 2.5, -2.1]} />
     <SpotFixture position={[10.1, 6.9, -2.1]} target={[12.8, 2.5, -2.1]} />
-    <rectAreaLight position={[0, 8.3, 1.2]} rotation={[-Math.PI / 2, 0, 0]} color="#fff0d4" intensity={4} width={8} height={3} />
+    <pointLight position={[0, 7.6, 1.2]} color="#fff0d4" intensity={13} distance={16} decay={2} />
   </group>
 }
 
 function CentralCorridor() {
   const wallSpans: Array<[number, number]> = [[-10, -18.6], [-23.4, -39.6], [-44.4, -60.6], [-65.4, -79.6], [-84.4, -91.2]]
+  const marble = usePbrMaps('marble', 1.4, 13)
   return <group>
-    <mesh position={[0, 0, -50.6]} receiveShadow><boxGeometry args={[8.2, 0.17, 81.2]} /><meshStandardMaterial color="#9e978d" roughness={0.55} metalness={0.05} /></mesh>
+    <mesh position={[0, 0, -50.6]} receiveShadow><boxGeometry args={[8.2, 0.17, 81.2]} /><meshStandardMaterial {...marble} color="#c4b8a6" roughness={1} metalness={0.04} /></mesh>
+    <DustMotes position={[0, 2.9, -50.6]} bounds={[7, 4.4, 78]} count={40} />
     <Wall position={[0, 5.92, -50.6]} size={[8.3, 0.18, 81.2]} color="#c8c4bc" />
     {wallSpans.flatMap(([start, end]) => [-1, 1].map((side) => {
       const length = Math.abs(end - start)
@@ -230,7 +294,7 @@ function CentralCorridor() {
     {Array.from({ length: 19 }, (_, index) => -13 - index * 4.1).map((z, index) => <group key={z}>
       <mesh position={[0, 5.7, z]}><boxGeometry args={[4.9, 0.1, 0.1]} /><meshStandardMaterial color={charcoal} metalness={0.65} roughness={0.32} /></mesh>
       {[-1.7, 0, 1.7].map((x) => <mesh key={x} position={[x, 5.55, z]}><cylinderGeometry args={[0.11, 0.15, 0.23, 10]} /><meshStandardMaterial color={charcoal} metalness={0.72} roughness={0.3} /></mesh>)}
-      <pointLight position={[0, 5.35, z]} color="#ffeaca" intensity={index % 2 === 0 ? 3.4 : 2.6} distance={9} decay={2} />
+      {index % 2 === 0 && <pointLight position={[0, 5.35, z]} color="#ffeaca" intensity={3.6} distance={12} decay={2} />}
     </group>)}
     <mesh position={[0, 2.65, -91.08]} castShadow receiveShadow><boxGeometry args={[8.3, 5.3, 0.3]} /><meshStandardMaterial color={charcoal} roughness={0.56} /></mesh>
     <Text position={[0, 3.18, -90.9]} fontSize={0.42} letterSpacing={0.12} color="#eee3d1">PHÒNG KẾT</Text>
