@@ -1,7 +1,7 @@
-import { MeshReflectorMaterial, Text } from '@react-three/drei'
+import { MeshReflectorMaterial, Text, useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef, type ReactNode } from 'react'
-import { Group, Object3D } from 'three'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { Group, Object3D, SRGBColorSpace } from 'three'
 import { rooms, type RoomData } from '../data/content'
 import { galleryLayouts, type GalleryLayout } from '../data/layout'
 import { usePbrMaps } from '../hooks/usePbrMaps'
@@ -88,14 +88,43 @@ function DisplayPlinth({ position, accent }: { position: [number, number, number
   </group>
 }
 
+function GalleryArtwork({ image, position, rotationY = 0 }: {
+  image: string
+  position: [number, number, number]
+  rotationY?: number
+}) {
+  const loadedTexture = useTexture(image)
+  const texture = useMemo(() => {
+    const prepared = loadedTexture.clone()
+    prepared.colorSpace = SRGBColorSpace
+    prepared.needsUpdate = true
+    return prepared
+  }, [loadedTexture])
+
+  useEffect(() => () => texture.dispose(), [texture])
+
+  return <group position={position} rotation={[0, rotationY, 0]}>
+    <mesh position={[0, 0, -0.055]} castShadow><boxGeometry args={[2.12, 3.02, 0.13]} /><meshStandardMaterial color="#6e5638" metalness={0.28} roughness={0.5} /></mesh>
+    <mesh position={[0, 0, 0.02]} castShadow><boxGeometry args={[1.96, 2.86, 0.07]} /><meshStandardMaterial color="#ded4c2" roughness={0.8} /></mesh>
+    <mesh position={[0, 0.02, 0.065]}><planeGeometry args={[1.72, 2.58]} /><meshStandardMaterial map={texture} roughness={0.68} /></mesh>
+  </group>
+}
+
 function GalleryRoom({ layout }: { layout: GalleryLayout }) {
   const room = rooms[layout.roomId]
   const { center, size, side, accent } = layout
   const outerX = side === 'left' ? -20.86 : 20.86
-  const posterRotation = side === 'left' ? Math.PI / 2 : -Math.PI / 2
-  const offsets = room.posters.length === 1 ? [0] : room.posters.length === 2 ? [-2.7, 2.7] : [-4.6, 0, 4.6]
+  const outerPosterRotation = side === 'left' ? Math.PI / 2 : -Math.PI / 2
+  const outerPosters = room.posters.slice(0, Math.ceil(room.posters.length / 2))
+  const frontPosters = room.posters.slice(outerPosters.length)
+  const outerOffsets = outerPosters.length === 1 ? [0] : [-2.8, 2.8]
+  const frontOffsets = frontPosters.length === 1 ? [0] : [-2.8, 2.8]
   const backZ = center.z - size.depth / 2
   const frontZ = center.z + size.depth / 2
+  const decorativeArt = room.id === 8 ? [
+    `${import.meta.env.BASE_URL}posters/c1-buoc-ngoat.webp`,
+    `${import.meta.env.BASE_URL}posters/c7-xay-dung.webp`,
+  ] : []
 
   return <group>
     <GalleryFloor layout={layout} />
@@ -115,23 +144,47 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
     <Text position={[center.x, 2.15, backZ + 0.185]} fontSize={0.22} maxWidth={12} textAlign="center" color={charcoal} anchorX="center" anchorY="middle">{room.name.toUpperCase()}</Text>
     <Text position={[center.x, 1.72, backZ + 0.185]} fontSize={0.12} letterSpacing={0.14} color={accent} anchorX="center" anchorY="middle">{room.subtitle.toUpperCase()}</Text>
 
-    {room.posters.map((item, index) => <Poster
+    {outerPosters.map((item, index) => <Poster
       key={item.id}
       data={item}
-      position={[outerX + (side === 'left' ? 0.19 : -0.19), 2.48, center.z + offsets[index]]}
-      rotationY={posterRotation}
+      position={[outerX + (side === 'left' ? 0.19 : -0.19), 2.48, center.z + outerOffsets[index]]}
+      rotationY={outerPosterRotation}
+    />)}
+    {frontPosters.map((item, index) => <Poster
+      key={item.id}
+      data={item}
+      position={[center.x + frontOffsets[index], 2.48, frontZ - 0.19]}
+      rotationY={Math.PI}
+    />)}
+    {decorativeArt.map((image, index) => <GalleryArtwork
+      key={image}
+      image={image}
+      position={[center.x + [-2.8, 2.8][index], 2.48, frontZ - 0.19]}
+      rotationY={Math.PI}
     />)}
 
-    {offsets.map((offset, index) => <SpotFixture
+    {outerOffsets.map((offset, index) => <SpotFixture
       key={offset}
       position={[side === 'left' ? -17.8 : 17.8, 5.12, center.z + offset]}
       target={[outerX, 2.35, center.z + offset]}
-      light={index === Math.floor((offsets.length - 1) / 2)}
-      angle={offsets.length > 1 ? 0.92 : 0.4}
-      intensity={offsets.length > 1 ? 30 : 20}
+      light={index === 0}
+      angle={outerOffsets.length > 1 ? 0.92 : 0.4}
+      intensity={outerOffsets.length > 1 ? 30 : 20}
       distance={12}
     />)}
     <mesh position={[side === 'left' ? -17.8 : 17.8, 5.2, center.z]}><boxGeometry args={[0.12, 0.12, size.depth - 1.2]} /><meshStandardMaterial color={charcoal} metalness={0.62} roughness={0.34} /></mesh>
+    {(frontPosters.length > 0 || decorativeArt.length > 0) && <>
+      {(frontPosters.length > 0 ? frontOffsets : [-2.8, 2.8]).map((offset, index) => <SpotFixture
+        key={`front-${offset}`}
+        position={[center.x + offset, 5.12, frontZ - 3]}
+        target={[center.x + offset, 2.35, frontZ]}
+        light={index === 0}
+        angle={0.92}
+        intensity={30}
+        distance={12}
+      />)}
+      <mesh position={[center.x, 5.2, frontZ - 3]}><boxGeometry args={[size.width - 1.2, 0.12, 0.12]} /><meshStandardMaterial color={charcoal} metalness={0.62} roughness={0.34} /></mesh>
+    </>}
 
     <MuseumBench position={[center.x + (side === 'left' ? 1.2 : -1.2), 0, center.z]} rotation={Math.PI / 2} accent={accent} />
     <DisplayPlinth position={[center.x + (side === 'left' ? -4.7 : 4.7), 0, center.z + 5.9]} accent={accent} />
