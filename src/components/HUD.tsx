@@ -14,6 +14,8 @@ function areaCopy(area: string) {
 export function HUD() {
   const entered = useStore((state) => state.entered)
   const focused = useStore((state) => state.focusedPoster)
+  const focusedSeat = useStore((state) => state.focusedSeat)
+  const seated = useStore((state) => state.seated)
   const active = useStore((state) => state.activePoster)
   const area = useStore((state) => state.currentArea)
   const visited = useStore((state) => state.visitedRooms)
@@ -35,13 +37,15 @@ export function HUD() {
       <div><small>{copy.overline}</small><strong>{copy.title}</strong></div>
     </section>
 
-    <div className={`crosshair ${focused ? 'is-focused' : ''}`} aria-hidden="true"><i /></div>
+    <div className={`crosshair ${focused || focusedSeat || seated ? 'is-focused' : ''}`} aria-hidden="true"><i /></div>
     {focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}
+    {seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
+    {!seated && !focused && focusedSeat && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
 
     {!mobile && !locked && <div className="lock-hint">
       <span className="mouse-icon" aria-hidden="true" />
       <strong>Nhấp vào không gian để điều khiển</strong>
-      <small>WASD di chuyển · Chuột quan sát · ESC thả chuột</small>
+      <small>WASD di chuyển · Chuột quan sát · Q bật/tắt điều khiển · Space nhảy</small>
     </div>}
 
     <div className="tour-progress" aria-label={`Đã khám phá ${visited.filter((id) => id > 0).length} trên 8 phòng`}>

@@ -15,9 +15,10 @@ Mở `http://127.0.0.1:4173` trong Chrome hoặc Edge.
 ### Điều khiển
 
 - `W A S D` hoặc phím mũi tên: di chuyển.
-- Chuột: quan sát; nhấp vào cảnh 3D để khóa chuột, `Esc` để thả.
+- Chuột: quan sát; nhấp vào cảnh 3D để khóa chuột, `Q` để bật/tắt chế độ điều khiển.
+- `Space`: nhảy.
 - `Shift`: đi nhanh.
-- `E` hoặc nhấp chuột: xem hiện vật đang được ngắm.
+- `E` hoặc nhấp chuột: xem hiện vật đang được ngắm; `E` hoặc `Esc` để đóng và tiếp tục di chuyển.
 - Điện thoại: joystick bên trái để đi, vuốt nửa phải để nhìn.
 
 ## Kiểm tra trước khi triển khai

@@ -9,10 +9,19 @@ export interface PlayerPose {
   dirZ: number
 }
 
+export interface SeatPose {
+  id: string
+  center: [number, number] // x, z dùng để đo khoảng cách
+  eye: [number, number, number] // vị trí camera khi ngồi
+  look: [number, number, number] // điểm nhìn khi ngồi
+}
+
 interface MuseumState {
   entered: boolean
   activePoster: PosterData | null
   focusedPoster: string | null
+  focusedSeat: SeatPose | null
+  seated: SeatPose | null
   currentArea: MuseumArea
   visitedRooms: number[]
   playerPose: PlayerPose
@@ -25,6 +34,9 @@ interface MuseumState {
   openPoster: (poster: PosterData) => void
   closePoster: () => void
   setFocusedPoster: (id: string | null) => void
+  setFocusedSeat: (seat: SeatPose | null) => void
+  sit: (seat: SeatPose) => void
+  stand: () => void
   setPlayerPose: (pose: PlayerPose) => void
   setControlsLocked: (locked: boolean) => void
   toggleAudio: () => void
@@ -38,6 +50,8 @@ export const useStore = create<MuseumState>((set) => ({
   entered: false,
   activePoster: null,
   focusedPoster: null,
+  focusedSeat: null,
+  seated: null,
   currentArea: 'grounds',
   visitedRooms: [],
   playerPose: { x: 0, z: 42, dirX: 0, dirZ: -1 },
@@ -50,6 +64,9 @@ export const useStore = create<MuseumState>((set) => ({
   openPoster: (activePoster) => set({ activePoster, focusedPoster: null }),
   closePoster: () => set({ activePoster: null }),
   setFocusedPoster: (focusedPoster) => set({ focusedPoster }),
+  setFocusedSeat: (focusedSeat) => set({ focusedSeat }),
+  sit: (seat) => set({ seated: seat }),
+  stand: () => set({ seated: null }),
   setPlayerPose: (playerPose) => set((state) => {
     const currentArea = getAreaAt(playerPose.x, playerPose.z)
     const roomMatch = currentArea.match(/^room-(\d+)$/)
