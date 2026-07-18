@@ -34,10 +34,10 @@ npm run capture -- http://127.0.0.1:4173 final
 
 ## Cấu trúc chính
 
-- `src/data/content.ts`: nội dung 9 khu và 24 hiện vật.
+- `src/data/content.ts`: nội dung 9 khu và 29 hiện vật.
 - `src/data/layout.ts`: mặt bằng dùng chung cho cảnh 3D, collision và minimap.
 - `src/components/Exterior.tsx`: cổng, sân, cảnh quan và mặt tiền.
 - `src/components/MuseumInterior.tsx`: sảnh, hành lang, gallery, biển tên và nội thất.
-- `public/posters/`: 24 poster WebP của triển lãm.
+- `public/posters/`: 29 poster WebP của triển lãm.
 
 Thư mục `dist/` được tạo bởi `npm run build` và có thể triển khai lên dịch vụ host tĩnh hỗ trợ Vite.
