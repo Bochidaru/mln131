@@ -36,9 +36,8 @@ function getWebSocketUrl() {
   if (configured) return configured
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const sameOriginPort = window.location.port
-  const port = sameOriginPort === '5266' ? sameOriginPort : '5266'
-  return `${protocol}//${window.location.hostname}:${port}/ws`
+  if (import.meta.env.DEV) return `${protocol}//${window.location.hostname}:5266/ws`
+  return `${protocol}//${window.location.host}/ws`
 }
 
 function toRemotePlayer(player: ServerPlayer): RemotePlayer {
