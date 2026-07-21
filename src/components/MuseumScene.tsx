@@ -11,7 +11,9 @@ import { Minimap } from './Minimap'
 import { MobileControls } from './MobileControls'
 import { MuseumInterior } from './MuseumInterior'
 import { Player } from './Player'
+import { RemotePlayers } from './RemotePlayers'
 import { Surroundings } from './Surroundings'
+import { MultiplayerConnector } from '../network/MultiplayerConnector'
 
 export function MuseumScene() {
   return <main className="museum">
@@ -56,6 +58,7 @@ export function MuseumScene() {
         <BakeShadows />
       </Suspense>
       <Player />
+      <RemotePlayers />
       <EffectComposer multisampling={0}>
         <SMAA />
         <Bloom intensity={0.18} luminanceThreshold={1.15} luminanceSmoothing={0.5} mipmapBlur />
@@ -69,5 +72,6 @@ export function MuseumScene() {
     <Minimap />
     <MobileControls />
     <ContentPanel />
+    <MultiplayerConnector />
   </main>
 }
