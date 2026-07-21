@@ -105,6 +105,7 @@ export function Player() {
         store.sit(seat)
         if (quizRoomId !== null && (store.quizCooldowns[quizRoomId] ?? 0) <= Date.now()) {
           store.setQuizRoomId(quizRoomId)
+          controls.current?.unlock()
           store.setQuizOpen(true)
         }
         museumAudio.click()
