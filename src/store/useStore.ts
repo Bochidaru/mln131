@@ -68,6 +68,7 @@ interface MuseumState {
   quizCooldowns: Record<number, number>
   quizOpen: boolean
   quizSession: number
+  quizResult: { roomId: number; correct: number; earned: number; score: number } | null
   outgoingQuiz: { id: number; roomId: number; correct: number } | null
   chatOpen: boolean
   chatMessages: ChatEntry[]
@@ -99,6 +100,7 @@ interface MuseumState {
   setScore: (score: number) => void
   setQuizRoomId: (roomId: number | null) => void
   setQuizOpen: (open: boolean) => void
+  setQuizResult: (result: MuseumState['quizResult']) => void
   setQuizCooldown: (roomId: number, availableAt: number) => void
   submitQuiz: (roomId: number, correct: number) => void
   setChatOpen: (open: boolean) => void
@@ -137,6 +139,7 @@ export const useStore = create<MuseumState>((set) => ({
   quizCooldowns: {},
   quizOpen: false,
   quizSession: 0,
+  quizResult: null,
   outgoingQuiz: null,
   chatOpen: false,
   chatMessages: [],
@@ -175,7 +178,8 @@ export const useStore = create<MuseumState>((set) => ({
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
   setScore: (score) => set({ score }),
   setQuizRoomId: (quizRoomId) => set((state) => state.quizRoomId === quizRoomId ? state : { quizRoomId }),
-  setQuizOpen: (quizOpen) => set((state) => ({ quizOpen, quizSession: quizOpen ? state.quizSession + 1 : state.quizSession })),
+  setQuizOpen: (quizOpen) => set((state) => ({ quizOpen, quizSession: quizOpen ? state.quizSession + 1 : state.quizSession, quizResult: quizOpen ? null : state.quizResult })),
+  setQuizResult: (quizResult) => set({ quizResult }),
   setQuizCooldown: (roomId, availableAt) => set((state) => ({ quizCooldowns: { ...state.quizCooldowns, [roomId]: availableAt } })),
   submitQuiz: (roomId, correct) => set({ outgoingQuiz: { id: Date.now(), roomId, correct }, quizOpen: false }),
   setChatOpen: (chatOpen) => set({ chatOpen }),

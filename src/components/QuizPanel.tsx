@@ -8,7 +8,10 @@ export function QuizPanel() {
   const setOpen = useStore((state) => state.setQuizOpen)
   const submit = useStore((state) => state.submitQuiz)
   const session = useStore((state) => state.quizSession)
+  const result = useStore((state) => state.quizResult)
+  const setResult = useStore((state) => state.setQuizResult)
 
+  if (result) return <div className="quiz-backdrop"><section className="quiz-panel quiz-result"><small>KẾT QUẢ QUIZ PHÒNG {result.roomId}</small><h2>Bạn đúng {result.correct}/5 câu</h2><p>+{result.earned} điểm · Tổng: {result.score} điểm</p><button onClick={() => setResult(null)}>Tiếp tục tham quan</button></section></div>
   if (!open || !roomId) return null
   return <div className="quiz-backdrop"><section className="quiz-panel"><button className="quiz-close" onClick={() => setOpen(false)}>×</button><QuizRound key={session} roomId={roomId} submit={submit} /></section></div>
 }

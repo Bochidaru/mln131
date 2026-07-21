@@ -202,6 +202,7 @@ export function MultiplayerConnector() {
       if (message.type === 'quizResult' && message.payload?.quizRoomId !== undefined && message.payload.availableAt) {
         store.setScore(message.payload.score ?? 0)
         store.setQuizCooldown(message.payload.quizRoomId, Date.parse(message.payload.availableAt))
+        store.setQuizResult({ roomId: message.payload.quizRoomId, correct: message.payload.correct ?? 0, earned: message.payload.earned ?? 0, score: message.payload.score ?? 0 })
       }
 
       if (message.type === 'quizCooldown' && message.payload?.quizRoomId !== undefined && message.payload.availableAt) {
