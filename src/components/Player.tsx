@@ -81,23 +81,31 @@ export function Player() {
     const onInteract = (event: KeyboardEvent) => {
       if (event.code !== 'KeyE' && event.code !== 'Enter') return
       const store = useStore.getState()
-      if (!store.entered || store.activePoster || store.quizOpen) return
+      if (!store.entered || store.activePoster) return
       if (store.seated) {
         const back = seatReturn.current ?? [camera.position.x, 1.68, camera.position.z]
         camera.position.set(back[0], back[1], back[2])
         seatReturn.current = null
         store.stand()
+        store.setQuizOpen(false)
         museumAudio.click()
         return
       }
+      if (store.quizOpen) return
       if (store.focusedSeat && !store.focusedPoster) {
         const seat = store.focusedSeat
+        const seatArea = getAreaAt(seat.center[0], seat.center[1])
+        const roomMatch = seatArea.match(/^room-(\d+)$/)
+        const quizRoomId = roomMatch ? Number(roomMatch[1]) : null
         // Nhớ đúng chỗ đang đứng (đã đi được) để lát nữa đứng dậy trả về, tránh kẹt trong vùng va chạm của ghế.
         seatReturn.current = [camera.position.x, 1.68, camera.position.z]
         camera.position.set(seat.eye[0], seat.eye[1], seat.eye[2])
         camera.lookAt(seat.look[0], seat.look[1], seat.look[2])
         store.sit(seat)
-        if (store.quizRoomId !== null && (store.quizCooldowns[store.quizRoomId] ?? 0) <= Date.now()) store.setQuizOpen(true)
+        if (quizRoomId !== null && (store.quizCooldowns[quizRoomId] ?? 0) <= Date.now()) {
+          store.setQuizRoomId(quizRoomId)
+          store.setQuizOpen(true)
+        }
         museumAudio.click()
       }
     }
