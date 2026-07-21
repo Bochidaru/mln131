@@ -8,7 +8,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { resolvePlayerMovement } from '../hooks/useCollision'
 import { useStore } from '../store/useStore'
 import { seatRegistry } from '../utils/seatRegistry'
-import { galleryLayouts } from '../data/layout'
+import { galleryLayouts, getAreaAt } from '../data/layout'
 
 const direction = new Vector3()
 const displacement = new Vector3()
@@ -82,10 +82,6 @@ export function Player() {
       if (event.code !== 'KeyE' && event.code !== 'Enter') return
       const store = useStore.getState()
       if (!store.entered || store.activePoster || store.quizOpen) return
-      if (store.quizRoomId !== null && (store.quizCooldowns[store.quizRoomId] ?? 0) <= Date.now()) {
-        store.setQuizOpen(true)
-        return
-      }
       if (store.seated) {
         const back = seatReturn.current ?? [camera.position.x, 1.68, camera.position.z]
         camera.position.set(back[0], back[1], back[2])
@@ -101,6 +97,7 @@ export function Player() {
         camera.position.set(seat.eye[0], seat.eye[1], seat.eye[2])
         camera.lookAt(seat.look[0], seat.look[1], seat.look[2])
         store.sit(seat)
+        if (store.quizRoomId !== null && (store.quizCooldowns[store.quizRoomId] ?? 0) <= Date.now()) store.setQuizOpen(true)
         museumAudio.click()
       }
     }
@@ -117,7 +114,7 @@ export function Player() {
     forward.y = 0
     forward.normalize()
 
-    if (!entered || activePoster) {
+    if (!entered || activePoster || store.quizOpen) {
       if (activePoster && jumping.current) {
         frameCamera.position.y = eyeHeight
         verticalVelocity.current = 0
@@ -148,13 +145,6 @@ export function Player() {
     }
 
     // Tìm ghế gần nhất trong tầm với để hiện gợi ý "Nhấn E để ngồi".
-    const quizStation = galleryLayouts.find((gallery) => {
-      const dx = frameCamera.position.x - gallery.center.x
-      const dz = frameCamera.position.z - gallery.center.z
-      return dx * dx + dz * dz < 2.5 * 2.5
-    })
-    store.setQuizRoomId(quizStation?.roomId ?? null)
-
     let nearest: string | null = null
     let nearestDist = SEAT_RANGE_SQ
     for (const seat of seatRegistry) {
@@ -167,6 +157,15 @@ export function Player() {
       focusedSeatId.current = nearest
       store.setFocusedSeat(nearest ? seatRegistry.find((seat) => seat.id === nearest) ?? null : null)
     }
+    const nearbySeat = nearest ? seatRegistry.find((seat) => seat.id === nearest) ?? null : null
+    const seatArea = nearbySeat ? getAreaAt(nearbySeat.center[0], nearbySeat.center[1]) : null
+    const seatRoomMatch = seatArea?.match(/^room-(\d+)$/)
+    const quizStation = galleryLayouts.find((gallery) => {
+      const dx = frameCamera.position.x - gallery.center.x
+      const dz = frameCamera.position.z - gallery.center.z
+      return dx * dx + dz * dz < 2.5 * 2.5
+    })
+    store.setQuizRoomId(seatRoomMatch ? Number(seatRoomMatch[1]) : quizStation?.roomId ?? null)
 
     const zInput = (keys.current.has('KeyW') || keys.current.has('ArrowUp') ? 1 : 0)
       - (keys.current.has('KeyS') || keys.current.has('ArrowDown') ? 1 : 0)

@@ -66,7 +66,8 @@ export function HUD() {
     <div className={`crosshair ${focused || focusedSeat || seated ? 'is-focused' : ''}`} aria-hidden="true"><i /></div>
     {focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}
     {seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
-    {!seated && !focused && focusedSeat && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
+    {!seated && !focused && focusedSeat && quizRoomId === null && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
+    {!seated && !focused && focusedSeat && quizRoomId !== null && (quizCooldowns[quizRoomId] ?? 0) <= now && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống và làm quiz</p>}
     {quizRoomId !== null && !focused && !focusedSeat && (quizCooldowns[quizRoomId] ?? 0) <= now && <p className="interaction-hint"><kbd>E</kbd> Làm quiz phòng {quizRoomId}</p>}
 
     {!mobile && !locked && <div className="lock-hint">
