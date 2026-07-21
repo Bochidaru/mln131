@@ -56,6 +56,12 @@ public sealed class GameRoom
 
         lock (_playerGate)
         {
+            if (_players.Count >= 100)
+            {
+                rejectionReason = "Phòng đã đủ 100 người. Hãy thử lại sau.";
+                return false;
+            }
+
             if (_players.Values.Any(player => string.Equals(player.State.Name, name, StringComparison.OrdinalIgnoreCase)))
             {
                 rejectionReason = "Tên này đã có người dùng trong bảo tàng. Hãy chọn tên khác.";
@@ -252,6 +258,10 @@ public sealed class GameRoom
             {
                 ApplyPose(connection, payload);
             }
+            else if (message?.Type == "chat" && message.Payload is JsonElement chatPayload)
+            {
+                BroadcastChat(connection, chatPayload);
+            }
         }
     }
 
@@ -278,6 +288,20 @@ public sealed class GameRoom
         connection.State.FocusedPoster = pose.FocusedPoster;
         connection.State.Seated = pose.Seated;
         connection.State.TickId = _tickCounter;
+    }
+
+    private void BroadcastChat(ClientConnection connection, JsonElement payload)
+    {
+        if (!payload.TryGetProperty("text", out var textElement) || textElement.ValueKind != JsonValueKind.String) return;
+        var text = textElement.GetString()?.Trim();
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (text.Length > 280) text = text[..280];
+
+        _ = BroadcastMessageAsync(new ServerMessage("chat", connection.Id, new
+        {
+            name = connection.State.Name,
+            text
+        }), exceptPlayerId: null, CancellationToken.None);
     }
 
     private static async Task<string?> ReceiveTextAsync(WebSocket socket, CancellationToken cancellationToken)

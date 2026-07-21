@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap, SRGBColorSpace } from 'three'
 import { AudioController } from './AudioController'
 import { ContentPanel } from './ContentPanel'
+import { ChatPanel } from './ChatPanel'
 import { Exterior } from './Exterior'
 import { HUD } from './HUD'
 import { Minimap } from './Minimap'
@@ -82,6 +83,7 @@ export function MuseumScene() {
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
     <AudioController />
     <HUD />
+    <ChatPanel />
     <Minimap />
     <MobileControls />
     <ContentPanel />

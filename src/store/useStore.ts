@@ -32,6 +32,13 @@ export interface RemotePlayer {
   lastSeen: number
 }
 
+export interface ChatEntry {
+  id: string
+  playerId: string
+  name: string
+  text: string
+}
+
 interface MuseumState {
   entered: boolean
   joining: boolean
@@ -55,6 +62,9 @@ interface MuseumState {
   graphicsQuality: 'auto' | 'low' | 'medium' | 'high'
   settingsOpen: boolean
   entranceDoorOpen: boolean
+  chatOpen: boolean
+  chatMessages: ChatEntry[]
+  outgoingChat: { id: number; text: string } | null
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
   beginJoining: () => void
@@ -79,6 +89,9 @@ interface MuseumState {
   setGraphicsQuality: (quality: MuseumState['graphicsQuality']) => void
   setSettingsOpen: (open: boolean) => void
   setEntranceDoorOpen: (open: boolean) => void
+  setChatOpen: (open: boolean) => void
+  addChatMessage: (message: ChatEntry) => void
+  queueChat: (text: string) => void
   upsertRemotePlayers: (players: RemotePlayer[]) => void
   removeRemotePlayer: (playerId: string) => void
   clearRemotePlayers: () => void
@@ -107,6 +120,9 @@ export const useStore = create<MuseumState>((set) => ({
   graphicsQuality: 'auto',
   settingsOpen: false,
   entranceDoorOpen: false,
+  chatOpen: false,
+  chatMessages: [],
+  outgoingChat: null,
   remotePlayers: {},
   enter: () => set({ entered: true, joining: false, joinError: null }),
   beginJoining: () => set({ joining: true, joinError: null }),
@@ -139,6 +155,9 @@ export const useStore = create<MuseumState>((set) => ({
   setGraphicsQuality: (graphicsQuality) => set({ graphicsQuality }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
+  setChatOpen: (chatOpen) => set({ chatOpen }),
+  addChatMessage: (message) => set((state) => ({ chatMessages: [...state.chatMessages, message].slice(-60) })),
+  queueChat: (text) => set({ outgoingChat: { id: Date.now(), text } }),
   upsertRemotePlayers: (players) => set((state) => {
     const remotePlayers = { ...state.remotePlayers }
     for (const player of players) {

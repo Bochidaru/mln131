@@ -29,6 +29,8 @@ type ServerMessage = {
     players?: ServerPlayer[]
     player?: ServerPlayer
     reason?: string
+    text?: string
+    name?: string
   }
 }
 
@@ -113,6 +115,15 @@ export function MultiplayerConnector() {
       }))
     }
 
+    let lastChatId = 0
+    const unsubscribeFromChat = useStore.subscribe((state) => {
+      const chat = state.outgoingChat
+      const socket = socketRef.current
+      if (!chat || chat.id === lastChatId || !socket || socket.readyState !== WebSocket.OPEN) return
+      lastChatId = chat.id
+      socket.send(JSON.stringify({ type: 'chat', payload: { text: chat.text } }))
+    })
+
     const handleMessage = (event: MessageEvent<string>) => {
       let message: ServerMessage
       try {
@@ -159,6 +170,16 @@ export function MultiplayerConnector() {
 
       if (message.type === 'playerLeft' && message.playerId) {
         store.removeRemotePlayer(message.playerId)
+        return
+      }
+
+      if (message.type === 'chat' && message.playerId && message.payload?.text) {
+        store.addChatMessage({
+          id: `${message.playerId}-${performance.now()}`,
+          playerId: message.playerId,
+          name: message.payload.name ?? 'Khách tham quan',
+          text: message.payload.text,
+        })
       }
     }
 
@@ -191,6 +212,7 @@ export function MultiplayerConnector() {
     return () => {
       disposed = true
       clearTimers()
+      unsubscribeFromChat()
       socketRef.current?.close()
       socketRef.current = null
       const store = useStore.getState()

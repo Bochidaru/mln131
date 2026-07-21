@@ -100,7 +100,7 @@ kbd { font: inherit; }
 .intro-location small { margin-top: 6px; color: rgba(240,233,220,.58); font-size: 8px; }
 
 /* In-world HUD */
-.hud { position: fixed; inset: 0; z-index: 6; pointer-events: none; text-transform: uppercase; }
+.hud { position: fixed; inset: 0; z-index: 15; pointer-events: none; text-transform: uppercase; }
 .hud-brand { position: absolute; left: 26px; top: 22px; display: flex; align-items: center; gap: 10px; color: var(--paper); text-shadow: 0 2px 18px rgba(0,0,0,.6); }
 .hud-brand > span { width: 29px; height: 29px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.46); color: #dcb66d; font: 700 20px 'Cormorant Garamond', serif; }
 .hud-brand div { display: grid; }
@@ -152,11 +152,17 @@ kbd { font: inherit; }
   border: 1px solid rgba(240,233,220,.25); color: var(--paper); background: rgba(18,21,19,.76); cursor: pointer; backdrop-filter: blur(10px); text-transform: uppercase;
 }
 .audio-toggle > span:last-child { font-size: 7px; letter-spacing: .13em; }
-.settings-wrap { position: absolute; right: 27px; top: 70px; pointer-events: auto; }
+.settings-wrap { position: fixed; z-index: 16; right: 27px; bottom: 25px; pointer-events: auto; }
 .settings-toggle { height: 32px; padding: 0 11px; border: 1px solid rgba(240,233,220,.25); color: var(--paper); background: rgba(18,21,19,.76); cursor: pointer; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(10px); }
-.settings-panel { width: 204px; margin-top: 7px; padding: 13px; border: 1px solid rgba(240,233,220,.22); color: var(--paper); background: rgba(18,21,19,.92); box-shadow: 0 16px 45px rgba(0,0,0,.3); backdrop-filter: blur(14px); }
+.settings-panel { position: absolute; right: 0; bottom: 39px; width: 204px; padding: 13px; border: 1px solid rgba(240,233,220,.22); color: var(--paper); background: rgba(18,21,19,.92); box-shadow: 0 16px 45px rgba(0,0,0,.3); backdrop-filter: blur(14px); }
 .settings-panel strong { color: #d8b16c; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }.settings-panel p { margin: 6px 0 11px; color: rgba(255,255,255,.5); font-size: 8px; line-height: 1.45; text-transform: none; }
 .settings-panel div { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.settings-panel button { min-height: 29px; border: 1px solid rgba(255,255,255,.16); color: rgba(255,255,255,.7); background: transparent; cursor: pointer; font-size: 7px; letter-spacing: .07em; text-transform: uppercase; }.settings-panel button.is-selected { border-color: #d8b16c; color: #201c16; background: #d8b16c; }
+.chat-panel { position: fixed; z-index: 16; left: 26px; bottom: 62px; width: min(330px, calc(100vw - 52px)); pointer-events: auto; text-transform: none; }
+.chat-log { display: grid; gap: 4px; margin-bottom: 7px; }
+.chat-log p { margin: 0; padding: 5px 8px; display: flex; gap: 7px; color: rgba(255,255,255,.85); background: rgba(18,21,19,.68); box-shadow: 0 5px 15px rgba(0,0,0,.14); font: 500 10px/1.35 'Be Vietnam Pro', sans-serif; backdrop-filter: blur(8px); }
+.chat-log p.is-self { border-left: 2px solid #d8b16c; }.chat-log b { color: #d8b16c; white-space: nowrap; }.chat-log span { overflow-wrap: anywhere; }
+.chat-panel form { display: block; }.chat-panel input { width: 100%; height: 38px; padding: 0 11px; border: 1px solid #d8b16c; outline: 0; color: var(--paper); background: rgba(18,21,19,.93); font: 500 10px 'Be Vietnam Pro', sans-serif; box-shadow: 0 9px 30px rgba(0,0,0,.28); }.chat-panel input::placeholder { color: rgba(255,255,255,.47); }
+.chat-panel > button { padding: 7px 9px; border: 1px solid rgba(240,233,220,.28); color: rgba(255,255,255,.68); background: rgba(18,21,19,.72); cursor: pointer; font: 500 8px 'Be Vietnam Pro', sans-serif; letter-spacing: .06em; }.chat-panel > button kbd { margin-right: 5px; padding: 2px 4px; border: 1px solid rgba(216,177,108,.6); color: #d8b16c; font: inherit; }
 .audio-bars { color: #d7b36e; font-size: 7px; letter-spacing: 1px; }
 
 /* Actual floor plan */
@@ -267,7 +273,8 @@ kbd { font: inherit; }
   .location-index { width: 42px; font-size: 23px; }.location-card strong { max-width: 155px; font-size: 9px; }
   .lobby-players { left: 14px; top: 126px; width: 215px; }
   .audio-toggle { right: 13px; top: 13px; width: 38px; padding: 0; justify-content: center; }.audio-toggle > span:last-child { display: none; }
-  .settings-wrap { right: 13px; top: 57px; }.settings-toggle { width: 38px; padding: 0; font-size: 14px; }.settings-toggle span { display: none; }.settings-panel { width: 190px; }
+  .settings-wrap { right: 13px; bottom: 13px; }.settings-toggle { width: 38px; padding: 0; font-size: 14px; }.settings-toggle span { display: none; }.settings-panel { width: 190px; }
+  .chat-panel { left: 14px; bottom: 56px; width: min(300px, calc(100vw - 28px)); }
   .minimap { top: 124px; right: 13px; width: 154px; }.minimap.is-expanded { width: 174px; }.minimap svg { max-height: 270px; }.map-header b { display: none; }
   .tour-progress { left: 14px; bottom: 13px; }.tour-progress > i { width: 70px; }
   .lock-hint { display: none; }
