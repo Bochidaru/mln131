@@ -6,6 +6,7 @@ import { ACESFilmicToneMapping, PCFSoftShadowMap, SRGBColorSpace } from 'three'
 import { AudioController } from './AudioController'
 import { ContentPanel } from './ContentPanel'
 import { ChatPanel } from './ChatPanel'
+import { QuizPanel } from './QuizPanel'
 import { Exterior } from './Exterior'
 import { HUD } from './HUD'
 import { Minimap } from './Minimap'
@@ -84,6 +85,7 @@ export function MuseumScene() {
     <AudioController />
     <HUD />
     <ChatPanel />
+    <QuizPanel />
     <Minimap />
     <MobileControls />
     <ContentPanel />

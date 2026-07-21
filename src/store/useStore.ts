@@ -20,6 +20,7 @@ export interface RemotePlayer {
   id: string
   name: string
   avatarId: string
+  score: number
   x: number
   y: number
   z: number
@@ -62,6 +63,11 @@ interface MuseumState {
   graphicsQuality: 'auto' | 'low' | 'medium' | 'high'
   settingsOpen: boolean
   entranceDoorOpen: boolean
+  score: number
+  quizRoomId: number | null
+  quizCooldowns: Record<number, number>
+  quizOpen: boolean
+  outgoingQuiz: { id: number; roomId: number; correct: number } | null
   chatOpen: boolean
   chatMessages: ChatEntry[]
   outgoingChat: { id: number; text: string } | null
@@ -89,6 +95,11 @@ interface MuseumState {
   setGraphicsQuality: (quality: MuseumState['graphicsQuality']) => void
   setSettingsOpen: (open: boolean) => void
   setEntranceDoorOpen: (open: boolean) => void
+  setScore: (score: number) => void
+  setQuizRoomId: (roomId: number | null) => void
+  setQuizOpen: (open: boolean) => void
+  setQuizCooldown: (roomId: number, availableAt: number) => void
+  submitQuiz: (roomId: number, correct: number) => void
   setChatOpen: (open: boolean) => void
   addChatMessage: (message: ChatEntry) => void
   queueChat: (text: string) => void
@@ -120,6 +131,11 @@ export const useStore = create<MuseumState>((set) => ({
   graphicsQuality: 'auto',
   settingsOpen: false,
   entranceDoorOpen: false,
+  score: 0,
+  quizRoomId: null,
+  quizCooldowns: {},
+  quizOpen: false,
+  outgoingQuiz: null,
   chatOpen: false,
   chatMessages: [],
   outgoingChat: null,
@@ -155,6 +171,11 @@ export const useStore = create<MuseumState>((set) => ({
   setGraphicsQuality: (graphicsQuality) => set({ graphicsQuality }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
+  setScore: (score) => set({ score }),
+  setQuizRoomId: (quizRoomId) => set((state) => state.quizRoomId === quizRoomId ? state : { quizRoomId }),
+  setQuizOpen: (quizOpen) => set({ quizOpen }),
+  setQuizCooldown: (roomId, availableAt) => set((state) => ({ quizCooldowns: { ...state.quizCooldowns, [roomId]: availableAt } })),
+  submitQuiz: (roomId, correct) => set({ outgoingQuiz: { id: Date.now(), roomId, correct }, quizOpen: false }),
   setChatOpen: (chatOpen) => set({ chatOpen }),
   addChatMessage: (message) => set((state) => ({ chatMessages: [...state.chatMessages, message].slice(-60) })),
   queueChat: (text) => set({ outgoingChat: { id: Date.now(), text } }),

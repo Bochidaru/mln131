@@ -8,6 +8,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { resolvePlayerMovement } from '../hooks/useCollision'
 import { useStore } from '../store/useStore'
 import { seatRegistry } from '../utils/seatRegistry'
+import { galleryLayouts } from '../data/layout'
 
 const direction = new Vector3()
 const displacement = new Vector3()
@@ -80,7 +81,11 @@ export function Player() {
     const onInteract = (event: KeyboardEvent) => {
       if (event.code !== 'KeyE' && event.code !== 'Enter') return
       const store = useStore.getState()
-      if (!store.entered || store.activePoster) return
+      if (!store.entered || store.activePoster || store.quizOpen) return
+      if (store.quizRoomId !== null && (store.quizCooldowns[store.quizRoomId] ?? 0) <= Date.now()) {
+        store.setQuizOpen(true)
+        return
+      }
       if (store.seated) {
         const back = seatReturn.current ?? [camera.position.x, 1.68, camera.position.z]
         camera.position.set(back[0], back[1], back[2])
@@ -143,6 +148,13 @@ export function Player() {
     }
 
     // Tìm ghế gần nhất trong tầm với để hiện gợi ý "Nhấn E để ngồi".
+    const quizStation = galleryLayouts.find((gallery) => {
+      const dx = frameCamera.position.x - gallery.center.x
+      const dz = frameCamera.position.z - gallery.center.z
+      return dx * dx + dz * dz < 2.5 * 2.5
+    })
+    store.setQuizRoomId(quizStation?.roomId ?? null)
+
     let nearest: string | null = null
     let nearestDist = SEAT_RANGE_SQ
     for (const seat of seatRegistry) {

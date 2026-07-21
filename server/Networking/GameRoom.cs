@@ -85,6 +85,7 @@ public sealed class GameRoom
             roomId = Id,
             tickRate = _tickRate,
             online = PlayerCount,
+            score = playerConnection.State.Score,
             players = CreateSnapshot().Players
         }), cancellationToken);
 
@@ -159,6 +160,7 @@ public sealed class GameRoom
                 PlayerId = source.PlayerId,
                 Name = source.Name,
                 AvatarId = source.AvatarId,
+                Score = source.Score,
                 X = source.X,
                 Y = source.Y,
                 Z = source.Z,
@@ -262,6 +264,10 @@ public sealed class GameRoom
             {
                 BroadcastChat(connection, chatPayload);
             }
+            else if (message?.Type == "quizReward" && message.Payload is JsonElement quizPayload)
+            {
+                AwardQuiz(connection, quizPayload);
+            }
         }
     }
 
@@ -302,6 +308,27 @@ public sealed class GameRoom
             name = connection.State.Name,
             text
         }), exceptPlayerId: null, CancellationToken.None);
+    }
+
+    private void AwardQuiz(ClientConnection connection, JsonElement payload)
+    {
+        if (!payload.TryGetProperty("roomId", out var roomElement) || !roomElement.TryGetInt32(out var roomId)
+            || !payload.TryGetProperty("correct", out var correctElement) || !correctElement.TryGetInt32(out var correct)) return;
+        if (roomId is < 1 or > 8 || connection.State.Area != $"room-{roomId}") return;
+        if (connection.QuizCooldowns.TryGetValue(roomId, out var availableAt) && availableAt > DateTimeOffset.UtcNow)
+        {
+            _ = SendAsync(connection, new ServerMessage("quizCooldown", Payload: new { quizRoomId = roomId, availableAt }), CancellationToken.None);
+            return;
+        }
+
+        var clampedCorrect = Math.Clamp(correct, 0, 5);
+        var earned = clampedCorrect * 2;
+        var nextAvailableAt = DateTimeOffset.UtcNow.AddSeconds(30);
+        connection.QuizCooldowns[roomId] = nextAvailableAt;
+        connection.State.Score += earned;
+
+        _ = SendAsync(connection, new ServerMessage("quizResult", Payload: new { quizRoomId = roomId, correct = clampedCorrect, earned, score = connection.State.Score, availableAt = nextAvailableAt }), CancellationToken.None);
+        _ = BroadcastMessageAsync(new ServerMessage("playerUpdated", connection.Id, new { player = connection.State }), exceptPlayerId: connection.Id, CancellationToken.None);
     }
 
     private static async Task<string?> ReceiveTextAsync(WebSocket socket, CancellationToken cancellationToken)

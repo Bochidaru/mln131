@@ -29,6 +29,9 @@ export function HUD() {
   const settingsOpen = useStore((state) => state.settingsOpen)
   const setSettingsOpen = useStore((state) => state.setSettingsOpen)
   const toggleAudio = useStore((state) => state.toggleAudio)
+  const score = useStore((state) => state.score)
+  const quizRoomId = useStore((state) => state.quizRoomId)
+  const quizCooldowns = useStore((state) => state.quizCooldowns)
   const mobile = useIsMobile()
   const copy = areaCopy(area)
 
@@ -47,8 +50,8 @@ export function HUD() {
     <aside className="lobby-players" aria-label="Người đang tham quan">
       <header><span>Trong bảo tàng</span><b>{Object.keys(remotePlayers).length + 1}</b></header>
       <ul>
-        <li><i className={multiplayerConnected ? 'is-online' : ''} />{playerName || 'Bạn'} <small>Bạn</small></li>
-        {Object.values(remotePlayers).map((player) => <li key={player.id}><i className="is-online" />{player.name}</li>)}
+        <li><i className={multiplayerConnected ? 'is-online' : ''} />{playerName || 'Bạn'} <small>{score} điểm</small></li>
+        {Object.values(remotePlayers).map((player) => <li key={player.id}><i className="is-online" />{player.name}<small>{player.score} điểm</small></li>)}
       </ul>
     </aside>
 
@@ -56,6 +59,7 @@ export function HUD() {
     {focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}
     {seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
     {!seated && !focused && focusedSeat && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
+    {quizRoomId !== null && !focused && !focusedSeat && (quizCooldowns[quizRoomId] ?? 0) <= Date.now() && <p className="interaction-hint"><kbd>E</kbd> Làm quiz phòng {quizRoomId}</p>}
 
     {!mobile && !locked && <div className="lock-hint">
       <span className="mouse-icon" aria-hidden="true" />

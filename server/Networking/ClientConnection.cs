@@ -11,5 +11,6 @@ public sealed class ClientConnection(string id, WebSocket socket)
 
     // State hiện tại của player
     public PlayerState State { get; } = new() { PlayerId = id };
+    public Dictionary<int, DateTimeOffset> QuizCooldowns { get; } = new();
 }
 

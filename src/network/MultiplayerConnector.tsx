@@ -5,6 +5,7 @@ type ServerPlayer = {
   playerId: string
   name?: string
   avatarId?: string
+  score?: number
   x: number
   y?: number
   z: number
@@ -31,6 +32,11 @@ type ServerMessage = {
     reason?: string
     text?: string
     name?: string
+    score?: number
+    quizRoomId?: number
+    correct?: number
+    earned?: number
+    availableAt?: string
   }
 }
 
@@ -52,6 +58,7 @@ function toRemotePlayer(player: ServerPlayer): RemotePlayer {
     id: player.playerId,
     name: player.name?.trim() || 'Khách tham quan',
     avatarId: player.avatarId ?? 'block-explorer',
+    score: player.score ?? 0,
     x: player.x,
     y: player.y ?? 1.68,
     z: player.z,
@@ -124,6 +131,15 @@ export function MultiplayerConnector() {
       socket.send(JSON.stringify({ type: 'chat', payload: { text: chat.text } }))
     })
 
+    let lastQuizId = 0
+    const unsubscribeFromQuiz = useStore.subscribe((state) => {
+      const quiz = state.outgoingQuiz
+      const socket = socketRef.current
+      if (!quiz || quiz.id === lastQuizId || !socket || socket.readyState !== WebSocket.OPEN) return
+      lastQuizId = quiz.id
+      socket.send(JSON.stringify({ type: 'quizReward', payload: { roomId: quiz.roomId, correct: quiz.correct } }))
+    })
+
     const handleMessage = (event: MessageEvent<string>) => {
       let message: ServerMessage
       try {
@@ -137,6 +153,7 @@ export function MultiplayerConnector() {
       if (message.type === 'welcome') {
         store.setMultiplayerPlayerId(message.playerId ?? null)
         store.setMultiplayerConnected(true)
+        store.setScore(message.payload?.score ?? 0)
         if (message.payload?.players) store.upsertRemotePlayers(message.payload.players.map(toRemotePlayer))
         store.enter()
         if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
@@ -181,6 +198,15 @@ export function MultiplayerConnector() {
           text: message.payload.text,
         })
       }
+
+      if (message.type === 'quizResult' && message.payload?.quizRoomId !== undefined && message.payload.availableAt) {
+        store.setScore(message.payload.score ?? 0)
+        store.setQuizCooldown(message.payload.quizRoomId, Date.parse(message.payload.availableAt))
+      }
+
+      if (message.type === 'quizCooldown' && message.payload?.quizRoomId !== undefined && message.payload.availableAt) {
+        store.setQuizCooldown(message.payload.quizRoomId, Date.parse(message.payload.availableAt))
+      }
     }
 
     const connect = () => {
@@ -213,6 +239,7 @@ export function MultiplayerConnector() {
       disposed = true
       clearTimers()
       unsubscribeFromChat()
+      unsubscribeFromQuiz()
       socketRef.current?.close()
       socketRef.current = null
       const store = useStore.getState()
