@@ -15,7 +15,7 @@ public sealed class ConnectionManager
     private readonly ILogger<ConnectionManager> _logger;
 
     public int OnlineCount => _rooms.Values.Sum(room => room.PlayerCount);
-    public const int tickRate = 20;
+    public const int tickRate = 32;
 
     public ConnectionManager(ILogger<ConnectionManager> logger, GameRoomFactory factory)
     {

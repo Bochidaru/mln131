@@ -32,7 +32,8 @@ type ServerMessage = {
   }
 }
 
-const SEND_INTERVAL_MS = 50
+const NETWORK_TICK_RATE = 32
+const SEND_INTERVAL_MS = 1000 / NETWORK_TICK_RATE
 const RECONNECT_DELAY_MS = 1200
 
 function getWebSocketUrl() {
