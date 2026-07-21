@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.StaticFiles;
 using server.Networking;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +20,15 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors();
+
+var staticFileTypes = new FileExtensionContentTypeProvider();
+staticFileTypes.Mappings[".hdr"] = "application/octet-stream";
+
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = staticFileTypes,
+});
 
 app.UseWebSockets(new WebSocketOptions
 {
@@ -43,5 +53,7 @@ app.Map("/ws", async (HttpContext context, ConnectionManager connections) =>
     using var socket = await context.WebSockets.AcceptWebSocketAsync();
     await connections.HandleAsync(socket, context.RequestAborted);
 });
+
+app.MapFallbackToFile("index.html");
 
 app.Run();
