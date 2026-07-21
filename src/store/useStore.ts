@@ -16,6 +16,20 @@ export interface SeatPose {
   look: [number, number, number] // điểm nhìn khi ngồi
 }
 
+export interface RemotePlayer {
+  id: string
+  x: number
+  y: number
+  z: number
+  dirX: number
+  dirZ: number
+  area: MuseumArea | string
+  focusedPoster: string | null
+  seated: boolean
+  tickId: number
+  lastSeen: number
+}
+
 interface MuseumState {
   entered: boolean
   activePoster: PosterData | null
@@ -30,6 +44,9 @@ interface MuseumState {
   mapExpanded: boolean
   mobileMove: { x: number; z: number }
   mobileLook: { x: number; y: number }
+  multiplayerConnected: boolean
+  multiplayerPlayerId: string | null
+  remotePlayers: Record<string, RemotePlayer>
   enter: () => void
   openPoster: (poster: PosterData) => void
   closePoster: () => void
@@ -44,6 +61,11 @@ interface MuseumState {
   setMapExpanded: (expanded: boolean) => void
   setMobileMove: (move: { x: number; z: number }) => void
   setMobileLook: (look: { x: number; y: number }) => void
+  setMultiplayerConnected: (connected: boolean) => void
+  setMultiplayerPlayerId: (playerId: string | null) => void
+  upsertRemotePlayers: (players: RemotePlayer[]) => void
+  removeRemotePlayer: (playerId: string) => void
+  clearRemotePlayers: () => void
 }
 
 export const useStore = create<MuseumState>((set) => ({
@@ -60,6 +82,9 @@ export const useStore = create<MuseumState>((set) => ({
   mapExpanded: true,
   mobileMove: { x: 0, z: 0 },
   mobileLook: { x: 0, y: 0 },
+  multiplayerConnected: false,
+  multiplayerPlayerId: null,
+  remotePlayers: {},
   enter: () => set({ entered: true }),
   openPoster: (activePoster) => set({ activePoster, focusedPoster: null }),
   closePoster: () => set({ activePoster: null }),
@@ -82,4 +107,19 @@ export const useStore = create<MuseumState>((set) => ({
   setMapExpanded: (mapExpanded) => set({ mapExpanded }),
   setMobileMove: (mobileMove) => set({ mobileMove }),
   setMobileLook: (mobileLook) => set({ mobileLook }),
+  setMultiplayerConnected: (multiplayerConnected) => set({ multiplayerConnected }),
+  setMultiplayerPlayerId: (multiplayerPlayerId) => set({ multiplayerPlayerId }),
+  upsertRemotePlayers: (players) => set((state) => {
+    const remotePlayers = { ...state.remotePlayers }
+    for (const player of players) {
+      if (player.id !== state.multiplayerPlayerId) remotePlayers[player.id] = player
+    }
+    return { remotePlayers }
+  }),
+  removeRemotePlayer: (playerId) => set((state) => {
+    const remotePlayers = { ...state.remotePlayers }
+    delete remotePlayers[playerId]
+    return { remotePlayers }
+  }),
+  clearRemotePlayers: () => set({ remotePlayers: {} }),
 }))
