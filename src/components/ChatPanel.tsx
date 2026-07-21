@@ -10,6 +10,8 @@ export function ChatPanel() {
   const queueChat = useStore((state) => state.queueChat)
   const input = useRef<HTMLInputElement>(null)
   const [draft, setDraft] = useState('')
+  const latestMessageId = messages[messages.length - 1]?.id
+  const [expiredMessageId, setExpiredMessageId] = useState<string | undefined>()
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -25,12 +27,21 @@ export function ChatPanel() {
     if (chatOpen) requestAnimationFrame(() => input.current?.focus())
   }, [chatOpen])
 
-  if (!entered) return null
+  useEffect(() => {
+    if (!latestMessageId) return
+    const timer = window.setTimeout(() => setExpiredMessageId(latestMessageId), 3000)
+    return () => window.clearTimeout(timer)
+  }, [latestMessageId])
+
+  if (!entered || (!chatOpen && latestMessageId === expiredMessageId)) return null
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     const text = draft.trim().replace(/\s+/g, ' ').slice(0, 280)
-    if (!text) return
+    if (!text) {
+      setChatOpen(false)
+      return
+    }
     queueChat(text)
     setDraft('')
     setChatOpen(false)

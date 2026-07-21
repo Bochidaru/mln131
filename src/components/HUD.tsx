@@ -67,17 +67,14 @@ export function HUD() {
       <span>Hành trình</span><i><b style={{ width: `${visited.filter((id) => id > 0).length / 8 * 100}%` }} /></i><strong>{visited.filter((id) => id > 0).length}/8</strong>
     </div>
 
-    <button className="audio-toggle" onClick={toggleAudio} aria-label={audioOn ? uiText.audioOn : uiText.audioOff}>
-      <span className="audio-bars" data-on={audioOn}>{audioOn ? '▮▮▮' : '—'}</span>
-      <span>{audioOn ? 'Âm thanh' : 'Đã tắt'}</span>
-    </button>
-
     <div className="settings-wrap">
       <button className="settings-toggle" onClick={() => setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen}>⚙ <span>Cài đặt</span></button>
-      {settingsOpen && <section className="settings-panel" aria-label="Cài đặt đồ họa">
-        <strong>Đồ họa</strong>
-        <p>Tùy chọn này áp dụng ngay lập tức.</p>
-        <div>{(['auto', 'low', 'medium', 'high'] as const).map((quality) => <button key={quality} className={graphicsQuality === quality ? 'is-selected' : ''} onClick={() => setGraphicsQuality(quality)}>{({ auto: 'Tự động', low: 'Thấp', medium: 'Trung bình', high: 'Cao' } as const)[quality]}</button>)}</div>
+      {settingsOpen && <section className="settings-panel" aria-label="Cài đặt">
+        <strong>Cài đặt</strong>
+        <div className="settings-section"><span>Đồ họa</span><p>Tùy chọn này áp dụng ngay lập tức.</p>
+          <div>{(['auto', 'low', 'medium', 'high'] as const).map((quality) => <button key={quality} className={graphicsQuality === quality ? 'is-selected' : ''} onClick={() => setGraphicsQuality(quality)}>{({ auto: 'Tự động', low: 'Thấp', medium: 'Trung bình', high: 'Cao' } as const)[quality]}</button>)}</div>
+        </div>
+        <div className="settings-section"><span>Âm thanh</span><button className="setting-audio" onClick={toggleAudio} aria-label={audioOn ? uiText.audioOn : uiText.audioOff}>{audioOn ? 'Âm thanh: Bật' : 'Âm thanh: Tắt'}</button></div>
       </section>}
     </div>
   </div>
