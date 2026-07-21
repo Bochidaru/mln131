@@ -1,4 +1,5 @@
 import { rooms, uiText } from '../data/content'
+import { useEffect, useState } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useStore } from '../store/useStore'
 
@@ -34,6 +35,13 @@ export function HUD() {
   const quizCooldowns = useStore((state) => state.quizCooldowns)
   const mobile = useIsMobile()
   const copy = areaCopy(area)
+  const [now, setNow] = useState(0)
+
+  useEffect(() => {
+    if (quizRoomId === null) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [quizRoomId])
 
   if (!entered || active) return null
 
@@ -59,7 +67,7 @@ export function HUD() {
     {focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}
     {seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
     {!seated && !focused && focusedSeat && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
-    {quizRoomId !== null && !focused && !focusedSeat && (quizCooldowns[quizRoomId] ?? 0) <= Date.now() && <p className="interaction-hint"><kbd>E</kbd> Làm quiz phòng {quizRoomId}</p>}
+    {quizRoomId !== null && !focused && !focusedSeat && (quizCooldowns[quizRoomId] ?? 0) <= now && <p className="interaction-hint"><kbd>E</kbd> Làm quiz phòng {quizRoomId}</p>}
 
     {!mobile && !locked && <div className="lock-hint">
       <span className="mouse-icon" aria-hidden="true" />

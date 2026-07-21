@@ -33,7 +33,8 @@ export function ChatPanel() {
     return () => window.clearTimeout(timer)
   }, [latestMessageId])
 
-  if (!entered || (!chatOpen && latestMessageId === expiredMessageId)) return null
+  if (!entered) return null
+  const showLog = chatOpen || latestMessageId !== expiredMessageId
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -48,9 +49,9 @@ export function ChatPanel() {
   }
 
   return <section className={`chat-panel ${chatOpen ? 'is-open' : ''}`} aria-label="Trò chuyện">
-    <div className="chat-log" aria-live="polite">
+    {showLog && <div className="chat-log" aria-live="polite">
       {messages.slice(-6).map((message) => <p key={message.id} className={message.playerId === playerId ? 'is-self' : ''}><b>{message.playerId === playerId ? 'Bạn' : message.name}</b><span>{message.text}</span></p>)}
-    </div>
+    </div>}
     {chatOpen ? <form onSubmit={submit}><input ref={input} maxLength={280} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Nhập tin nhắn rồi nhấn Enter…" /></form> : <button onClick={() => setChatOpen(true)}><kbd>ENTER</kbd> Trò chuyện</button>}
   </section>
 }
