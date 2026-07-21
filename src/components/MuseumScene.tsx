@@ -14,17 +14,31 @@ import { Player } from './Player'
 import { RemotePlayers } from './RemotePlayers'
 import { Surroundings } from './Surroundings'
 import { MultiplayerConnector } from '../network/MultiplayerConnector'
+import { useStore } from '../store/useStore'
+
+function PostEffects({ mediumQuality }: { mediumQuality: boolean }) {
+  return <EffectComposer multisampling={0}>
+    <SMAA />
+    {mediumQuality ? <></> : <Bloom intensity={0.18} luminanceThreshold={1.15} luminanceSmoothing={0.5} mipmapBlur />}
+    <Vignette eskil={false} offset={0.28} darkness={0.24} />
+    {mediumQuality ? <></> : <Noise opacity={0.028} />}
+  </EffectComposer>
+}
 
 export function MuseumScene() {
   // Keep the museum usable on integrated graphics and older laptops.
   const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
-  const lowEndDevice = navigator.hardwareConcurrency <= 4 || (deviceMemory !== undefined && deviceMemory <= 4)
+  const graphicsQuality = useStore((state) => state.graphicsQuality)
+  const autoLowEnd = navigator.hardwareConcurrency <= 4 || (deviceMemory !== undefined && deviceMemory <= 4)
+  const resolvedQuality = graphicsQuality === 'auto' ? (autoLowEnd ? 'low' : 'high') : graphicsQuality
+  const lowEndDevice = resolvedQuality === 'low'
+  const mediumQuality = resolvedQuality === 'medium'
 
   return <main className="museum">
     <Canvas
       id="museum-canvas"
       camera={{ fov: 58, near: 0.08, far: 190 }}
-      dpr={lowEndDevice ? [1, 1.2] : [1, 1.65]}
+      dpr={lowEndDevice ? [1, 1.15] : mediumQuality ? [1, 1.35] : [1, 1.65]}
       gl={{ antialias: false, powerPreference: 'high-performance', alpha: false }}
       shadows={lowEndDevice ? false : { type: PCFSoftShadowMap }}
       onCreated={({ gl }) => {
@@ -63,12 +77,7 @@ export function MuseumScene() {
       </Suspense>
       <Player />
       <RemotePlayers />
-      {!lowEndDevice && <EffectComposer multisampling={0}>
-        <SMAA />
-        <Bloom intensity={0.18} luminanceThreshold={1.15} luminanceSmoothing={0.5} mipmapBlur />
-        <Vignette eskil={false} offset={0.28} darkness={0.24} />
-        <Noise opacity={0.028} />
-      </EffectComposer>}
+      {lowEndDevice ? <></> : <PostEffects mediumQuality={mediumQuality} />}
     </Canvas>
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
     <AudioController />

@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useRef } from 'react'
 import { Group, MathUtils, type MeshStandardMaterial } from 'three'
 import { entranceDoorState } from '../utils/doorState'
+import { useStore } from '../store/useStore'
 
 // Mặt phẳng của cửa, trùng vị trí bộ 4 tấm kính cũ trên mặt tiền.
 const DOOR_Z = 9.3
@@ -54,12 +55,13 @@ export function EntranceDoor() {
   const progress = useRef(0) // tiến trình thô 0..1
   const lastInZone = useRef(-Infinity)
   const { camera } = useThree()
+  const remoteDoorOpen = useStore((state) => state.entranceDoorOpen)
 
   useFrame((state, delta) => {
     const p = camera.position
     const inZone = Math.abs(p.x) < SENSOR_HALF_X && Math.abs(p.z - DOOR_Z) < SENSOR_HALF_Z
     if (inZone) lastInZone.current = state.clock.elapsedTime
-    const shouldOpen = state.clock.elapsedTime - lastInZone.current < HOLD_OPEN
+    const shouldOpen = remoteDoorOpen || state.clock.elapsedTime - lastInZone.current < HOLD_OPEN
 
     const dir = shouldOpen ? 1 : -1
     const speed = shouldOpen ? OPEN_SPEED : CLOSE_SPEED

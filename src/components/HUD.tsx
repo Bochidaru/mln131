@@ -24,6 +24,10 @@ export function HUD() {
   const playerName = useStore((state) => state.playerName)
   const remotePlayers = useStore((state) => state.remotePlayers)
   const multiplayerConnected = useStore((state) => state.multiplayerConnected)
+  const graphicsQuality = useStore((state) => state.graphicsQuality)
+  const setGraphicsQuality = useStore((state) => state.setGraphicsQuality)
+  const settingsOpen = useStore((state) => state.settingsOpen)
+  const setSettingsOpen = useStore((state) => state.setSettingsOpen)
   const toggleAudio = useStore((state) => state.toggleAudio)
   const mobile = useIsMobile()
   const copy = areaCopy(area)
@@ -67,5 +71,14 @@ export function HUD() {
       <span className="audio-bars" data-on={audioOn}>{audioOn ? '▮▮▮' : '—'}</span>
       <span>{audioOn ? 'Âm thanh' : 'Đã tắt'}</span>
     </button>
+
+    <div className="settings-wrap">
+      <button className="settings-toggle" onClick={() => setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen}>⚙ <span>Cài đặt</span></button>
+      {settingsOpen && <section className="settings-panel" aria-label="Cài đặt đồ họa">
+        <strong>Đồ họa</strong>
+        <p>Tùy chọn này áp dụng ngay lập tức.</p>
+        <div>{(['auto', 'low', 'medium', 'high'] as const).map((quality) => <button key={quality} className={graphicsQuality === quality ? 'is-selected' : ''} onClick={() => setGraphicsQuality(quality)}>{({ auto: 'Tự động', low: 'Thấp', medium: 'Trung bình', high: 'Cao' } as const)[quality]}</button>)}</div>
+      </section>}
+    </div>
   </div>
 }

@@ -51,6 +51,8 @@ export function Player() {
     camera.lookAt(...(start?.target ?? [0, 5.2, 4]))
 
     const down = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.matches('input, textarea, select, [contenteditable="true"]')) return
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyQ', 'Space'].includes(event.code)) event.preventDefault()
 
       const store = useStore.getState()

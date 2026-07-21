@@ -4,6 +4,7 @@ import { useStore, type RemotePlayer } from '../store/useStore'
 type ServerPlayer = {
   playerId: string
   name?: string
+  avatarId?: string
   x: number
   y?: number
   z: number
@@ -19,6 +20,7 @@ type ServerMessage = {
   type: string
   playerId?: string
   tickId?: number
+  doorOpen?: boolean
   players?: ServerPlayer[]
   payload?: {
     roomId?: string
@@ -26,6 +28,7 @@ type ServerMessage = {
     online?: number
     players?: ServerPlayer[]
     player?: ServerPlayer
+    reason?: string
   }
 }
 
@@ -45,6 +48,7 @@ function toRemotePlayer(player: ServerPlayer): RemotePlayer {
   return {
     id: player.playerId,
     name: player.name?.trim() || 'Khách tham quan',
+    avatarId: player.avatarId ?? 'block-explorer',
     x: player.x,
     y: player.y ?? 1.68,
     z: player.z,
@@ -60,14 +64,17 @@ function toRemotePlayer(player: ServerPlayer): RemotePlayer {
 
 export function MultiplayerConnector() {
   const entered = useStore((state) => state.entered)
+  const joining = useStore((state) => state.joining)
+  const shouldConnect = entered || joining
   const socketRef = useRef<WebSocket | null>(null)
   const reconnectRef = useRef<number | null>(null)
   const sendTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!entered) return
+    if (!shouldConnect) return
 
     let disposed = false
+    let rejected = false
 
     const clearTimers = () => {
       if (reconnectRef.current !== null) window.clearTimeout(reconnectRef.current)
@@ -119,11 +126,23 @@ export function MultiplayerConnector() {
         store.setMultiplayerPlayerId(message.playerId ?? null)
         store.setMultiplayerConnected(true)
         if (message.payload?.players) store.upsertRemotePlayers(message.payload.players.map(toRemotePlayer))
+        store.enter()
+        if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
+        sendPose()
+        sendTimerRef.current = window.setInterval(sendPose, SEND_INTERVAL_MS)
         return
       }
 
       if (message.type === 'snapshot' && message.players) {
         store.upsertRemotePlayers(message.players.map(toRemotePlayer))
+        store.setEntranceDoorOpen(Boolean(message.doorOpen))
+        return
+      }
+
+      if (message.type === 'joinRejected') {
+        rejected = true
+        store.rejectJoining(message.payload?.reason ?? 'Tên này hiện đã có người sử dụng.')
+        socketRef.current?.close()
         return
       }
 
@@ -147,12 +166,8 @@ export function MultiplayerConnector() {
       socketRef.current = socket
 
       socket.addEventListener('open', () => {
-        useStore.getState().setMultiplayerConnected(true)
-        const playerName = useStore.getState().playerName
-        socket.send(JSON.stringify({ type: 'profile', payload: { name: playerName } }))
-        if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
-        sendPose()
-        sendTimerRef.current = window.setInterval(sendPose, SEND_INTERVAL_MS)
+        const state = useStore.getState()
+        socket.send(JSON.stringify({ type: 'join', payload: { name: state.playerName, avatarId: state.avatarId } }))
       })
 
       socket.addEventListener('message', handleMessage)
@@ -162,7 +177,7 @@ export function MultiplayerConnector() {
         if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
         sendTimerRef.current = null
         useStore.getState().setMultiplayerConnected(false)
-        scheduleReconnect()
+        if (!rejected) scheduleReconnect()
       })
 
       socket.addEventListener('error', () => {
@@ -182,7 +197,7 @@ export function MultiplayerConnector() {
       store.setMultiplayerPlayerId(null)
       store.clearRemotePlayers()
     }
-  }, [entered])
+  }, [shouldConnect])
 
   return null
 }

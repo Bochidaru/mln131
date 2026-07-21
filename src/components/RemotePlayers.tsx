@@ -3,12 +3,14 @@ import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Group, Vector3 } from 'three'
 import { useStore, type RemotePlayer } from '../store/useStore'
+import { getAvatar } from '../data/avatars'
 
 function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
   const group = useRef<Group>(null)
   const targetPosition = useRef(new Vector3(player.x, 0, player.z))
   const targetYaw = useRef(Math.atan2(player.dirX, player.dirZ))
   const initialized = useRef(false)
+  const avatar = getAvatar(player.avatarId)
 
   useEffect(() => {
     targetPosition.current.set(player.x, 0, player.z)
@@ -34,15 +36,15 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
   return <group ref={group}>
     <mesh position={[0, 0.82, 0]} castShadow>
       <capsuleGeometry args={[0.28, 0.78, 6, 12]} />
-      <meshStandardMaterial color={player.seated ? '#496b64' : '#8f342a'} roughness={0.62} metalness={0.08} />
+      <meshStandardMaterial color={player.seated ? '#496b64' : avatar.suit} roughness={0.62} metalness={0.08} />
     </mesh>
     <mesh position={[0, 1.5, 0]} castShadow>
       <sphereGeometry args={[0.22, 16, 12]} />
-      <meshStandardMaterial color="#d3a078" roughness={0.7} />
+      <meshStandardMaterial color={avatar.skin} roughness={0.7} />
     </mesh>
     <mesh position={[0, 1.24, -0.25]} castShadow>
       <boxGeometry args={[0.12, 0.12, 0.38]} />
-      <meshStandardMaterial color="#2d302d" roughness={0.58} />
+      <meshStandardMaterial color={avatar.accent} roughness={0.58} />
     </mesh>
     <Text position={[0, 2.05, 0]} fontSize={0.16} color="#f2eadc" anchorX="center" anchorY="middle">
       {player.name}

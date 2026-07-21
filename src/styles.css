@@ -67,6 +67,17 @@ kbd { font: inherit; }
 .name-field input::placeholder { color: rgba(240,233,220,.38); }
 .name-field input:focus { border-color: #ecd096; box-shadow: 0 0 0 3px rgba(216,177,108,.15); }
 .name-error { flex-basis: 100%; order: 4; margin: -3px 0 0; color: #f0a49a; font-size: 9px; }
+.profile-form { display: flex; max-width: 620px; flex-wrap: wrap; align-items: end; gap: 14px 17px; }
+.profile-form .intro-subtitle { flex-basis: 100%; margin: 0; }
+.profile-form .primary-button { min-width: 230px; }
+.back-button { width: 100%; padding: 0; border: 0; color: rgba(240,233,220,.62); background: transparent; cursor: pointer; font: 600 8px 'Be Vietnam Pro', sans-serif; letter-spacing: .12em; text-align: left; text-transform: uppercase; }
+.avatar-picker { width: 100%; margin: 3px 0 0; padding: 13px; border: 1px solid rgba(240,233,220,.2); background: rgba(16,19,17,.42); }
+.avatar-picker legend { padding: 0 7px; color: #d7b36e; font-size: 8px; letter-spacing: .13em; text-transform: uppercase; }
+.avatar-picker > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
+.avatar-option { min-height: 76px; padding: 7px 4px; border: 1px solid rgba(240,233,220,.15); color: rgba(240,233,220,.72); background: rgba(255,255,255,.035); cursor: pointer; }
+.avatar-option:hover, .avatar-option.is-selected { border-color: #d8b16c; background: rgba(216,177,108,.13); }
+.avatar-option b { width: 26px; height: 26px; margin: 0 auto 5px; display: grid; place-items: center; color: var(--avatar-accent); background: var(--avatar-suit); font-size: 17px; }
+.avatar-option span, .avatar-option small { display: block; }.avatar-option span { font: 500 7px/1.25 'Be Vietnam Pro', sans-serif; }.avatar-option small { margin-top: 3px; color: rgba(240,233,220,.44); font-size: 6px; }
 .primary-button {
   min-width: 258px; padding: 16px 18px 16px 20px; border: 1px solid #c49b58; display: inline-flex; align-items: center; justify-content: space-between;
   color: #201c16; background: #d8b16c; text-transform: uppercase; letter-spacing: .12em; font-size: 10px; font-weight: 700; cursor: pointer;
@@ -141,6 +152,11 @@ kbd { font: inherit; }
   border: 1px solid rgba(240,233,220,.25); color: var(--paper); background: rgba(18,21,19,.76); cursor: pointer; backdrop-filter: blur(10px); text-transform: uppercase;
 }
 .audio-toggle > span:last-child { font-size: 7px; letter-spacing: .13em; }
+.settings-wrap { position: absolute; right: 27px; top: 70px; pointer-events: auto; }
+.settings-toggle { height: 32px; padding: 0 11px; border: 1px solid rgba(240,233,220,.25); color: var(--paper); background: rgba(18,21,19,.76); cursor: pointer; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(10px); }
+.settings-panel { width: 204px; margin-top: 7px; padding: 13px; border: 1px solid rgba(240,233,220,.22); color: var(--paper); background: rgba(18,21,19,.92); box-shadow: 0 16px 45px rgba(0,0,0,.3); backdrop-filter: blur(14px); }
+.settings-panel strong { color: #d8b16c; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }.settings-panel p { margin: 6px 0 11px; color: rgba(255,255,255,.5); font-size: 8px; line-height: 1.45; text-transform: none; }
+.settings-panel div { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.settings-panel button { min-height: 29px; border: 1px solid rgba(255,255,255,.16); color: rgba(255,255,255,.7); background: transparent; cursor: pointer; font-size: 7px; letter-spacing: .07em; text-transform: uppercase; }.settings-panel button.is-selected { border-color: #d8b16c; color: #201c16; background: #d8b16c; }
 .audio-bars { color: #d7b36e; font-size: 7px; letter-spacing: 1px; }
 
 /* Actual floor plan */
@@ -245,11 +261,13 @@ kbd { font: inherit; }
   .intro-copy { left: 29px; right: 24px; top: auto; bottom: 38px; width: auto; transform: none; }
   .intro h1 { font-size: clamp(46px, 14vw, 64px); }.intro-subtitle { margin-top: 17px; font-size: 17px; }.intro-deck { margin-bottom: 19px; font-size: 10px; }
   .intro-actions { gap: 10px; }.primary-button { width: 100%; min-width: 0; }.open-status { margin-left: 5px; }
+  .profile-form { gap: 12px; }.profile-form .primary-button { width: 100%; }.avatar-picker > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }.avatar-option { min-height: 57px; display: flex; align-items: center; gap: 8px; padding: 7px; text-align: left; }.avatar-option b { margin: 0; flex: 0 0 auto; }.avatar-option small { display: none; }
   .intro-guide { display: none; }
   .hud-brand { left: 14px; top: 13px; }.location-card { left: 14px; top: 56px; min-width: 215px; max-width: calc(100vw - 28px); }
   .location-index { width: 42px; font-size: 23px; }.location-card strong { max-width: 155px; font-size: 9px; }
   .lobby-players { left: 14px; top: 126px; width: 215px; }
   .audio-toggle { right: 13px; top: 13px; width: 38px; padding: 0; justify-content: center; }.audio-toggle > span:last-child { display: none; }
+  .settings-wrap { right: 13px; top: 57px; }.settings-toggle { width: 38px; padding: 0; font-size: 14px; }.settings-toggle span { display: none; }.settings-panel { width: 190px; }
   .minimap { top: 124px; right: 13px; width: 154px; }.minimap.is-expanded { width: 174px; }.minimap svg { max-height: 270px; }.map-header b { display: none; }
   .tour-progress { left: 14px; bottom: 13px; }.tour-progress > i { width: 70px; }
   .lock-hint { display: none; }

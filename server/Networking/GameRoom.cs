@@ -12,6 +12,7 @@ public sealed class GameRoom
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     public string Id { get; }
     private readonly ConcurrentDictionary<string, ClientConnection> _players = new();
+    private readonly object _playerGate = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly ILogger<GameRoom> _logger;
     private Task? _tickTask;
@@ -27,9 +28,49 @@ public sealed class GameRoom
 
     public int PlayerCount => _players.Count;
 
+    public bool TryJoin(ClientConnection playerConnection, JsonElement? payload, out string rejectionReason)
+    {
+        rejectionReason = string.Empty;
+        if (payload is not JsonElement profile || !profile.TryGetProperty("name", out var nameElement) || nameElement.ValueKind != JsonValueKind.String)
+        {
+            rejectionReason = "Tên hiển thị không hợp lệ.";
+            return false;
+        }
+
+        var name = string.Join(' ', (nameElement.GetString() ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        if (name.Length is < 1 or > 24)
+        {
+            rejectionReason = "Tên cần có từ 1 đến 24 ký tự.";
+            return false;
+        }
+
+        var avatarId = profile.TryGetProperty("avatarId", out var avatarElement) && avatarElement.ValueKind == JsonValueKind.String
+            ? avatarElement.GetString() ?? "block-explorer"
+            : "block-explorer";
+        var allowedAvatars = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "block-explorer", "forest-scout", "mushroom-captain", "neon-ninja", "space-marshal",
+            "rubber-duck", "banana-agent", "capybara-king", "pixel-knight", "robo-gecko"
+        };
+        if (!allowedAvatars.Contains(avatarId)) avatarId = "block-explorer";
+
+        lock (_playerGate)
+        {
+            if (_players.Values.Any(player => string.Equals(player.State.Name, name, StringComparison.OrdinalIgnoreCase)))
+            {
+                rejectionReason = "Tên này đã có người dùng trong bảo tàng. Hãy chọn tên khác.";
+                return false;
+            }
+
+            playerConnection.State.Name = name;
+            playerConnection.State.AvatarId = avatarId;
+            _players[playerConnection.Id] = playerConnection;
+        }
+        return true;
+    }
+
     public async Task AddPlayer(ClientConnection playerConnection, CancellationToken cancellationToken)
     {
-        _players[playerConnection.Id] = playerConnection;
         playerConnection.State.PlayerId = playerConnection.Id;
         playerConnection.State.TickId = _tickCounter;
 
@@ -61,12 +102,15 @@ public sealed class GameRoom
 
     public void RemovePlayer(ClientConnection playerConnection)
     {
-        if (_players.TryRemove(playerConnection.Id, out _))
+        lock (_playerGate)
         {
-            var leaveMessage = new ServerMessage("playerLeft", playerConnection.Id, new { online = PlayerCount });
+            if (_players.TryRemove(playerConnection.Id, out _))
+            {
+                var leaveMessage = new ServerMessage("playerLeft", playerConnection.Id, new { online = PlayerCount });
 
-            _ = BroadcastMessageAsync(leaveMessage, exceptPlayerId: playerConnection.Id, CancellationToken.None);
-            _logger.LogInformation("Player {PlayerId} disconnected", playerConnection.Id);
+                _ = BroadcastMessageAsync(leaveMessage, exceptPlayerId: playerConnection.Id, CancellationToken.None);
+                _logger.LogInformation("Player {PlayerId} disconnected", playerConnection.Id);
+            }
         }
     }
 
@@ -108,6 +152,7 @@ public sealed class GameRoom
             {
                 PlayerId = source.PlayerId,
                 Name = source.Name,
+                AvatarId = source.AvatarId,
                 X = source.X,
                 Y = source.Y,
                 Z = source.Z,
@@ -125,6 +170,7 @@ public sealed class GameRoom
         return new WorldState
         {
             TickId = _tickCounter,
+            DoorOpen = playersState.Any(player => Math.Abs(player.X) < 3.8f && Math.Abs(player.Z - 9.3f) < 4f),
             Players = playersState
         };
     }
@@ -206,10 +252,6 @@ public sealed class GameRoom
             {
                 ApplyPose(connection, payload);
             }
-            else if (message?.Type == "profile" && message.Payload is JsonElement profilePayload)
-            {
-                UpdateProfile(connection, profilePayload);
-            }
         }
     }
 
@@ -236,20 +278,6 @@ public sealed class GameRoom
         connection.State.FocusedPoster = pose.FocusedPoster;
         connection.State.Seated = pose.Seated;
         connection.State.TickId = _tickCounter;
-    }
-
-    private void UpdateProfile(ClientConnection connection, JsonElement payload)
-    {
-        if (!payload.TryGetProperty("name", out var nameElement) || nameElement.ValueKind != JsonValueKind.String) return;
-
-        var name = nameElement.GetString()?.Trim();
-        if (string.IsNullOrWhiteSpace(name)) return;
-
-        connection.State.Name = name.Length > 24 ? name[..24] : name;
-        _ = BroadcastMessageAsync(new ServerMessage("playerUpdated", connection.Id, new
-        {
-            player = connection.State
-        }), exceptPlayerId: connection.Id, CancellationToken.None);
     }
 
     private static async Task<string?> ReceiveTextAsync(WebSocket socket, CancellationToken cancellationToken)

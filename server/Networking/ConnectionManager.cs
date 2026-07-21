@@ -29,14 +29,25 @@ public sealed class ConnectionManager
     public async Task HandleAsync(WebSocket socket, CancellationToken cancellationToken)
     {
         var connection = new ClientConnection(Guid.NewGuid().ToString("N"), socket);
-        _clients[connection.Id] = connection;
-
-        _logger.LogInformation("Player {PlayerId} connected", connection.Id);
-
         var room = _rooms["Room-1"];
-        
+
         try
         {
+            var joinMessage = await ReceiveJoinMessageAsync(socket, cancellationToken);
+            if (joinMessage?.Type != "join")
+            {
+                await SendAsync(socket, new ServerMessage("joinRejected", Payload: new { reason = "Yêu cầu tham gia không hợp lệ." }), cancellationToken);
+                return;
+            }
+
+            if (!room.TryJoin(connection, joinMessage.Payload, out var rejectionReason))
+            {
+                await SendAsync(socket, new ServerMessage("joinRejected", Payload: new { reason = rejectionReason }), cancellationToken);
+                return;
+            }
+
+            _clients[connection.Id] = connection;
+            _logger.LogInformation("Player {PlayerId} connected", connection.Id);
             await room.AddPlayer(connection, cancellationToken);
         }
         finally
@@ -44,6 +55,29 @@ public sealed class ConnectionManager
             _clients.TryRemove(connection.Id, out _);
             _logger.LogInformation("Player {PlayerId} disconnected", connection.Id);
         }
+    }
+
+    private static async Task<ClientMessage?> ReceiveJoinMessageAsync(WebSocket socket, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[4096];
+        using var stream = new MemoryStream();
+        while (true)
+        {
+            var result = await socket.ReceiveAsync(buffer, cancellationToken);
+            if (result.MessageType != WebSocketMessageType.Text) return null;
+            stream.Write(buffer, 0, result.Count);
+            if (result.EndOfMessage)
+            {
+                try { return JsonSerializer.Deserialize<ClientMessage>(Encoding.UTF8.GetString(stream.ToArray()), JsonOptions); }
+                catch (JsonException) { return null; }
+            }
+        }
+    }
+
+    private static async Task SendAsync(WebSocket socket, ServerMessage message, CancellationToken cancellationToken)
+    {
+        var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message, JsonOptions));
+        await socket.SendAsync(payload, WebSocketMessageType.Text, true, cancellationToken);
     }
 }
 

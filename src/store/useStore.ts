@@ -19,6 +19,7 @@ export interface SeatPose {
 export interface RemotePlayer {
   id: string
   name: string
+  avatarId: string
   x: number
   y: number
   z: number
@@ -33,6 +34,8 @@ export interface RemotePlayer {
 
 interface MuseumState {
   entered: boolean
+  joining: boolean
+  joinError: string | null
   activePoster: PosterData | null
   focusedPoster: string | null
   focusedSeat: SeatPose | null
@@ -48,8 +51,14 @@ interface MuseumState {
   multiplayerConnected: boolean
   multiplayerPlayerId: string | null
   playerName: string
+  avatarId: string
+  graphicsQuality: 'auto' | 'low' | 'medium' | 'high'
+  settingsOpen: boolean
+  entranceDoorOpen: boolean
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
+  beginJoining: () => void
+  rejectJoining: (message: string) => void
   openPoster: (poster: PosterData) => void
   closePoster: () => void
   setFocusedPoster: (id: string | null) => void
@@ -66,6 +75,10 @@ interface MuseumState {
   setMultiplayerConnected: (connected: boolean) => void
   setMultiplayerPlayerId: (playerId: string | null) => void
   setPlayerName: (name: string) => void
+  setAvatarId: (avatarId: string) => void
+  setGraphicsQuality: (quality: MuseumState['graphicsQuality']) => void
+  setSettingsOpen: (open: boolean) => void
+  setEntranceDoorOpen: (open: boolean) => void
   upsertRemotePlayers: (players: RemotePlayer[]) => void
   removeRemotePlayer: (playerId: string) => void
   clearRemotePlayers: () => void
@@ -73,6 +86,8 @@ interface MuseumState {
 
 export const useStore = create<MuseumState>((set) => ({
   entered: false,
+  joining: false,
+  joinError: null,
   activePoster: null,
   focusedPoster: null,
   focusedSeat: null,
@@ -88,8 +103,14 @@ export const useStore = create<MuseumState>((set) => ({
   multiplayerConnected: false,
   multiplayerPlayerId: null,
   playerName: '',
+  avatarId: 'block-explorer',
+  graphicsQuality: 'auto',
+  settingsOpen: false,
+  entranceDoorOpen: false,
   remotePlayers: {},
-  enter: () => set({ entered: true }),
+  enter: () => set({ entered: true, joining: false, joinError: null }),
+  beginJoining: () => set({ joining: true, joinError: null }),
+  rejectJoining: (joinError) => set({ joining: false, joinError }),
   openPoster: (activePoster) => set({ activePoster, focusedPoster: null }),
   closePoster: () => set({ activePoster: null }),
   setFocusedPoster: (focusedPoster) => set({ focusedPoster }),
@@ -114,6 +135,10 @@ export const useStore = create<MuseumState>((set) => ({
   setMultiplayerConnected: (multiplayerConnected) => set({ multiplayerConnected }),
   setMultiplayerPlayerId: (multiplayerPlayerId) => set({ multiplayerPlayerId }),
   setPlayerName: (playerName) => set({ playerName }),
+  setAvatarId: (avatarId) => set({ avatarId }),
+  setGraphicsQuality: (graphicsQuality) => set({ graphicsQuality }),
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
   upsertRemotePlayers: (players) => set((state) => {
     const remotePlayers = { ...state.remotePlayers }
     for (const player of players) {
