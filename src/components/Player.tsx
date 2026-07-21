@@ -97,6 +97,7 @@ export function Player() {
         const seatArea = getAreaAt(seat.center[0], seat.center[1])
         const roomMatch = seatArea.match(/^room-(\d+)$/)
         const quizRoomId = roomMatch ? Number(roomMatch[1]) : null
+        if (quizRoomId !== null && (store.quizCooldowns[quizRoomId] ?? 0) > Date.now()) return
         // Nhớ đúng chỗ đang đứng (đã đi được) để lát nữa đứng dậy trả về, tránh kẹt trong vùng va chạm của ghế.
         seatReturn.current = [camera.position.x, 1.68, camera.position.z]
         camera.position.set(seat.eye[0], seat.eye[1], seat.eye[2])

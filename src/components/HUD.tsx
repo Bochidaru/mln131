@@ -36,11 +36,18 @@ export function HUD() {
   const mobile = useIsMobile()
   const copy = areaCopy(area)
   const [now, setNow] = useState(0)
+  const cooldownEndsAt = quizRoomId === null ? 0 : quizCooldowns[quizRoomId] ?? 0
+  const cooldownSeconds = Math.max(0, Math.ceil((cooldownEndsAt - now) / 1000))
+  const cooldownLabel = `${String(Math.floor(cooldownSeconds / 60)).padStart(2, '0')}:${String(cooldownSeconds % 60).padStart(2, '0')}`
 
   useEffect(() => {
     if (quizRoomId === null) return
+    const frame = requestAnimationFrame(() => setNow(Date.now()))
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(timer)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.clearInterval(timer)
+    }
   }, [quizRoomId])
 
   if (!entered || active) return null
@@ -67,7 +74,8 @@ export function HUD() {
     {focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}
     {seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
     {!seated && !focused && focusedSeat && quizRoomId === null && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
-    {!seated && !focused && focusedSeat && quizRoomId !== null && (quizCooldowns[quizRoomId] ?? 0) <= now && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống và làm quiz</p>}
+    {!seated && !focused && focusedSeat && quizRoomId !== null && cooldownSeconds > 0 && <p className="interaction-hint">Quiz sẵn sàng sau <kbd>{cooldownLabel}</kbd></p>}
+    {!seated && !focused && focusedSeat && quizRoomId !== null && cooldownSeconds === 0 && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống và làm quiz</p>}
 
     {!mobile && !locked && <div className="lock-hint">
       <span className="mouse-icon" aria-hidden="true" />
