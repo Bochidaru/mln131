@@ -8,7 +8,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { resolvePlayerMovement } from '../hooks/useCollision'
 import { useStore } from '../store/useStore'
 import { seatRegistry } from '../utils/seatRegistry'
-import { galleryLayouts, getAreaAt } from '../data/layout'
+import { getAreaAt } from '../data/layout'
 
 const direction = new Vector3()
 const displacement = new Vector3()
@@ -168,12 +168,7 @@ export function Player() {
     const nearbySeat = nearest ? seatRegistry.find((seat) => seat.id === nearest) ?? null : null
     const seatArea = nearbySeat ? getAreaAt(nearbySeat.center[0], nearbySeat.center[1]) : null
     const seatRoomMatch = seatArea?.match(/^room-(\d+)$/)
-    const quizStation = galleryLayouts.find((gallery) => {
-      const dx = frameCamera.position.x - gallery.center.x
-      const dz = frameCamera.position.z - gallery.center.z
-      return dx * dx + dz * dz < 2.5 * 2.5
-    })
-    store.setQuizRoomId(seatRoomMatch ? Number(seatRoomMatch[1]) : quizStation?.roomId ?? null)
+    store.setQuizRoomId(seatRoomMatch ? Number(seatRoomMatch[1]) : null)
 
     const zInput = (keys.current.has('KeyW') || keys.current.has('ArrowUp') ? 1 : 0)
       - (keys.current.has('KeyS') || keys.current.has('ArrowDown') ? 1 : 0)

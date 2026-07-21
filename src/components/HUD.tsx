@@ -68,7 +68,6 @@ export function HUD() {
     {seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
     {!seated && !focused && focusedSeat && quizRoomId === null && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
     {!seated && !focused && focusedSeat && quizRoomId !== null && (quizCooldowns[quizRoomId] ?? 0) <= now && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống và làm quiz</p>}
-    {quizRoomId !== null && !focused && !focusedSeat && (quizCooldowns[quizRoomId] ?? 0) <= now && <p className="interaction-hint"><kbd>E</kbd> Làm quiz phòng {quizRoomId}</p>}
 
     {!mobile && !locked && <div className="lock-hint">
       <span className="mouse-icon" aria-hidden="true" />
