@@ -21,6 +21,9 @@ export function HUD() {
   const visited = useStore((state) => state.visitedRooms)
   const locked = useStore((state) => state.controlsLocked)
   const audioOn = useStore((state) => state.audioOn)
+  const playerName = useStore((state) => state.playerName)
+  const remotePlayers = useStore((state) => state.remotePlayers)
+  const multiplayerConnected = useStore((state) => state.multiplayerConnected)
   const toggleAudio = useStore((state) => state.toggleAudio)
   const mobile = useIsMobile()
   const copy = areaCopy(area)
@@ -36,6 +39,14 @@ export function HUD() {
       <span className="location-index">{copy.index}</span>
       <div><small>{copy.overline}</small><strong>{copy.title}</strong></div>
     </section>
+
+    <aside className="lobby-players" aria-label="Người đang tham quan">
+      <header><span>Trong bảo tàng</span><b>{Object.keys(remotePlayers).length + 1}</b></header>
+      <ul>
+        <li><i className={multiplayerConnected ? 'is-online' : ''} />{playerName || 'Bạn'} <small>Bạn</small></li>
+        {Object.values(remotePlayers).map((player) => <li key={player.id}><i className="is-online" />{player.name}</li>)}
+      </ul>
+    </aside>
 
     <div className={`crosshair ${focused || focusedSeat || seated ? 'is-focused' : ''}`} aria-hidden="true"><i /></div>
     {focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}

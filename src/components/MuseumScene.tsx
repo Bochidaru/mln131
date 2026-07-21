@@ -16,13 +16,17 @@ import { Surroundings } from './Surroundings'
 import { MultiplayerConnector } from '../network/MultiplayerConnector'
 
 export function MuseumScene() {
+  // Keep the museum usable on integrated graphics and older laptops.
+  const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+  const lowEndDevice = navigator.hardwareConcurrency <= 4 || (deviceMemory !== undefined && deviceMemory <= 4)
+
   return <main className="museum">
     <Canvas
       id="museum-canvas"
       camera={{ fov: 58, near: 0.08, far: 190 }}
-      dpr={[1, 1.65]}
+      dpr={lowEndDevice ? [1, 1.2] : [1, 1.65]}
       gl={{ antialias: false, powerPreference: 'high-performance', alpha: false }}
-      shadows={{ type: PCFSoftShadowMap }}
+      shadows={lowEndDevice ? false : { type: PCFSoftShadowMap }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
         gl.toneMappingExposure = 1.12
@@ -37,9 +41,9 @@ export function MuseumScene() {
         position={[30, 22, 26]}
         color="#ffdcab"
         intensity={2.85}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        castShadow={!lowEndDevice}
+        shadow-mapSize-width={lowEndDevice ? 1024 : 2048}
+        shadow-mapSize-height={lowEndDevice ? 1024 : 2048}
         shadow-camera-near={1}
         shadow-camera-far={115}
         shadow-camera-left={-48}
@@ -59,12 +63,12 @@ export function MuseumScene() {
       </Suspense>
       <Player />
       <RemotePlayers />
-      <EffectComposer multisampling={0}>
+      {!lowEndDevice && <EffectComposer multisampling={0}>
         <SMAA />
         <Bloom intensity={0.18} luminanceThreshold={1.15} luminanceSmoothing={0.5} mipmapBlur />
         <Vignette eskil={false} offset={0.28} darkness={0.24} />
         <Noise opacity={0.028} />
-      </EffectComposer>
+      </EffectComposer>}
     </Canvas>
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
     <AudioController />

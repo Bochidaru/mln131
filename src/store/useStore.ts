@@ -18,6 +18,7 @@ export interface SeatPose {
 
 export interface RemotePlayer {
   id: string
+  name: string
   x: number
   y: number
   z: number
@@ -46,6 +47,7 @@ interface MuseumState {
   mobileLook: { x: number; y: number }
   multiplayerConnected: boolean
   multiplayerPlayerId: string | null
+  playerName: string
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
   openPoster: (poster: PosterData) => void
@@ -63,6 +65,7 @@ interface MuseumState {
   setMobileLook: (look: { x: number; y: number }) => void
   setMultiplayerConnected: (connected: boolean) => void
   setMultiplayerPlayerId: (playerId: string | null) => void
+  setPlayerName: (name: string) => void
   upsertRemotePlayers: (players: RemotePlayer[]) => void
   removeRemotePlayer: (playerId: string) => void
   clearRemotePlayers: () => void
@@ -84,6 +87,7 @@ export const useStore = create<MuseumState>((set) => ({
   mobileLook: { x: 0, y: 0 },
   multiplayerConnected: false,
   multiplayerPlayerId: null,
+  playerName: '',
   remotePlayers: {},
   enter: () => set({ entered: true }),
   openPoster: (activePoster) => set({ activePoster, focusedPoster: null }),
@@ -109,6 +113,7 @@ export const useStore = create<MuseumState>((set) => ({
   setMobileLook: (mobileLook) => set({ mobileLook }),
   setMultiplayerConnected: (multiplayerConnected) => set({ multiplayerConnected }),
   setMultiplayerPlayerId: (multiplayerPlayerId) => set({ multiplayerPlayerId }),
+  setPlayerName: (playerName) => set({ playerName }),
   upsertRemotePlayers: (players) => set((state) => {
     const remotePlayers = { ...state.remotePlayers }
     for (const player of players) {

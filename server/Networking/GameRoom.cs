@@ -55,7 +55,7 @@ public sealed class GameRoom
         }
         finally
         {
-            _players.TryRemove(playerConnection.Id, out _);
+            RemovePlayer(playerConnection);
         }
     }
 
@@ -107,6 +107,7 @@ public sealed class GameRoom
             playersState.Add(new PlayerState
             {
                 PlayerId = source.PlayerId,
+                Name = source.Name,
                 X = source.X,
                 Y = source.Y,
                 Z = source.Z,
@@ -205,6 +206,10 @@ public sealed class GameRoom
             {
                 ApplyPose(connection, payload);
             }
+            else if (message?.Type == "profile" && message.Payload is JsonElement profilePayload)
+            {
+                UpdateProfile(connection, profilePayload);
+            }
         }
     }
 
@@ -231,6 +236,20 @@ public sealed class GameRoom
         connection.State.FocusedPoster = pose.FocusedPoster;
         connection.State.Seated = pose.Seated;
         connection.State.TickId = _tickCounter;
+    }
+
+    private void UpdateProfile(ClientConnection connection, JsonElement payload)
+    {
+        if (!payload.TryGetProperty("name", out var nameElement) || nameElement.ValueKind != JsonValueKind.String) return;
+
+        var name = nameElement.GetString()?.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        connection.State.Name = name.Length > 24 ? name[..24] : name;
+        _ = BroadcastMessageAsync(new ServerMessage("playerUpdated", connection.Id, new
+        {
+            player = connection.State
+        }), exceptPlayerId: connection.Id, CancellationToken.None);
     }
 
     private static async Task<string?> ReceiveTextAsync(WebSocket socket, CancellationToken cancellationToken)

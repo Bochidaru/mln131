@@ -1,8 +1,23 @@
 import { uiText } from '../data/content'
+import { FormEvent, useState } from 'react'
 import { useStore } from '../store/useStore'
 
 export function IntroScreen() {
   const enter = useStore((state) => state.enter)
+  const setPlayerName = useStore((state) => state.setPlayerName)
+  const [name, setName] = useState('')
+  const [showNameError, setShowNameError] = useState(false)
+
+  const enterMuseum = (event: FormEvent) => {
+    event.preventDefault()
+    const normalizedName = name.trim().replace(/\s+/g, ' ').slice(0, 24)
+    if (!normalizedName) {
+      setShowNameError(true)
+      return
+    }
+    setPlayerName(normalizedName)
+    enter()
+  }
 
   return <main className="intro" aria-label="Giới thiệu Bảo tàng Tri thức MLN131">
     <div className="intro-shade" aria-hidden="true" />
@@ -17,12 +32,27 @@ export function IntroScreen() {
       <p className="intro-subtitle">Hành trình Chủ nghĩa xã hội khoa học</p>
       <p className="intro-deck">{uiText.intro}</p>
 
-      <div className="intro-actions">
-        <button className="primary-button" onClick={enter}>
+      <form className="intro-actions" onSubmit={enterMuseum}>
+        <label className="name-field">
+          <span>Tên hiển thị trong bảo tàng</span>
+          <input
+            autoFocus
+            maxLength={24}
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value)
+              setShowNameError(false)
+            }}
+            placeholder="Nhập tên của bạn"
+            aria-invalid={showNameError}
+          />
+        </label>
+        {showNameError && <p className="name-error">Hãy nhập tên trước khi vào bảo tàng.</p>}
+        <button className="primary-button" type="submit">
           <span>{uiText.enter}</span><i aria-hidden="true">→</i>
         </button>
         <span className="open-status"><i /> Đang mở cửa · Tham quan tự do</span>
-      </div>
+      </form>
 
       <div className="intro-guide" aria-label="Hướng dẫn điều khiển">
         <span><kbd>W A S D</kbd> Di chuyển</span>

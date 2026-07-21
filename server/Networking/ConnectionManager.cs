@@ -14,8 +14,8 @@ public sealed class ConnectionManager
     private readonly ConcurrentDictionary<string, GameRoom> _rooms = new();
     private readonly ILogger<ConnectionManager> _logger;
 
-    public int RoomCount => _rooms.Count;
-    public const int tickRate = 64;
+    public int OnlineCount => _rooms.Values.Sum(room => room.PlayerCount);
+    public const int tickRate = 20;
 
     public ConnectionManager(ILogger<ConnectionManager> logger, GameRoomFactory factory)
     {
@@ -42,7 +42,6 @@ public sealed class ConnectionManager
         finally
         {
             _clients.TryRemove(connection.Id, out _);
-            room.RemovePlayer(connection);
             _logger.LogInformation("Player {PlayerId} disconnected", connection.Id);
         }
     }

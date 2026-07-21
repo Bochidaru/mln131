@@ -3,6 +3,7 @@ import { useStore, type RemotePlayer } from '../store/useStore'
 
 type ServerPlayer = {
   playerId: string
+  name?: string
   x: number
   y?: number
   z: number
@@ -43,6 +44,7 @@ function getWebSocketUrl() {
 function toRemotePlayer(player: ServerPlayer): RemotePlayer {
   return {
     id: player.playerId,
+    name: player.name?.trim() || 'Khách tham quan',
     x: player.x,
     y: player.y ?? 1.68,
     z: player.z,
@@ -130,6 +132,11 @@ export function MultiplayerConnector() {
         return
       }
 
+      if (message.type === 'playerUpdated' && message.payload?.player) {
+        store.upsertRemotePlayers([toRemotePlayer(message.payload.player)])
+        return
+      }
+
       if (message.type === 'playerLeft' && message.playerId) {
         store.removeRemotePlayer(message.playerId)
       }
@@ -141,6 +148,8 @@ export function MultiplayerConnector() {
 
       socket.addEventListener('open', () => {
         useStore.getState().setMultiplayerConnected(true)
+        const playerName = useStore.getState().playerName
+        socket.send(JSON.stringify({ type: 'profile', payload: { name: playerName } }))
         if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
         sendPose()
         sendTimerRef.current = window.setInterval(sendPose, SEND_INTERVAL_MS)

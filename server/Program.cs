@@ -38,7 +38,7 @@ app.UseWebSockets(new WebSocketOptions
 app.MapGet("/health", (ConnectionManager connections) => Results.Ok(new
 {
     status = "ok",
-    online = connections.RoomCount,
+    online = connections.OnlineCount,
 }));
 
 app.Map("/ws", async (HttpContext context, ConnectionManager connections) =>
