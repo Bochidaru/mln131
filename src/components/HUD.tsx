@@ -33,6 +33,7 @@ export function HUD() {
   const score = useStore((state) => state.score)
   const quizRoomId = useStore((state) => state.quizRoomId)
   const quizCooldowns = useStore((state) => state.quizCooldowns)
+  const duel = useStore((state) => state.duel)
   const mobile = useIsMobile()
   const copy = areaCopy(area)
   const [now, setNow] = useState(0)
@@ -50,7 +51,7 @@ export function HUD() {
     }
   }, [quizRoomId])
 
-  if (!entered || active) return null
+  if (!entered || active || duel) return null
 
   return <div className="hud">
     <header className="hud-brand" aria-label="Bảo tàng Tri thức MLN131">

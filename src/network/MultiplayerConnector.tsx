@@ -32,6 +32,13 @@ type ServerMessage = {
     reason?: string
     text?: string
     name?: string
+    fromPlayerId?: string
+    duelId?: string
+    opponent?: string
+    winnerId?: string
+    transfer?: number
+    returnPose?: { x: number; z: number; dirX: number; dirZ: number }
+    duelPlayers?: { playerId: string; x: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
     score?: number
     quizRoomId?: number
     correct?: number
@@ -140,6 +147,23 @@ export function MultiplayerConnector() {
       socket.send(JSON.stringify({ type: 'quizReward', payload: { roomId: quiz.roomId, correct: quiz.correct } }))
     })
 
+    let lastPvpId = 0
+    const unsubscribeFromPvp = useStore.subscribe((state) => {
+      const action = state.outgoingPvp
+      const socket = socketRef.current
+      if (!action || action.id === lastPvpId || !socket || socket.readyState !== WebSocket.OPEN) return
+      lastPvpId = action.id
+      socket.send(JSON.stringify({ type: action.type, payload: action.payload }))
+    })
+    let lastDuelId = 0
+    const unsubscribeFromDuel = useStore.subscribe((state) => {
+      const action = state.outgoingDuel
+      const socket = socketRef.current
+      if (!action || action.id === lastDuelId || !socket || socket.readyState !== WebSocket.OPEN) return
+      lastDuelId = action.id
+      socket.send(JSON.stringify({ type: action.type, payload: action.payload }))
+    })
+
     const handleMessage = (event: MessageEvent<string>) => {
       let message: ServerMessage
       try {
@@ -163,7 +187,7 @@ export function MultiplayerConnector() {
       }
 
       if (message.type === 'snapshot' && message.players) {
-        store.upsertRemotePlayers(message.players.map(toRemotePlayer))
+        store.replaceRemotePlayers(message.players.map(toRemotePlayer))
         store.setEntranceDoorOpen(Boolean(message.doorOpen))
         return
       }
@@ -208,6 +232,15 @@ export function MultiplayerConnector() {
       if (message.type === 'quizCooldown' && message.payload?.quizRoomId !== undefined && message.payload.availableAt) {
         store.setQuizCooldown(message.payload.quizRoomId, Date.parse(message.payload.availableAt))
       }
+
+      if (message.type === 'pvpInvite' && message.payload?.fromPlayerId && message.payload.name) store.setPvpInvite({ fromPlayerId: message.payload.fromPlayerId, name: message.payload.name })
+      if (message.type === 'duelStart' && message.payload?.duelId && message.payload.opponent) store.startDuel(message.payload.duelId, message.payload.opponent)
+      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, player])))
+      if (message.type === 'duelResult') {
+        if (message.payload?.score !== undefined) store.setScore(message.payload.score)
+        if (message.payload?.returnPose) store.setPlayerPose(message.payload.returnPose)
+        store.endDuel()
+      }
     }
 
     const connect = () => {
@@ -241,6 +274,8 @@ export function MultiplayerConnector() {
       clearTimers()
       unsubscribeFromChat()
       unsubscribeFromQuiz()
+      unsubscribeFromPvp()
+      unsubscribeFromDuel()
       socketRef.current?.close()
       socketRef.current = null
       const store = useStore.getState()

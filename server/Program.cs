@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<GameRoomFactory>();
 builder.Services.AddSingleton<ConnectionManager>();
+builder.Services.AddSingleton<DuelManager>();
 
 builder.Services.AddCors(options =>
 {

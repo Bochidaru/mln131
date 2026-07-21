@@ -15,13 +15,14 @@ public sealed class GameRoom
     private readonly object _playerGate = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly ILogger<GameRoom> _logger;
+    private readonly DuelManager _duels;
     private Task? _tickTask;
     private long _tickCounter = 0;
     private readonly int _tickRate;
 
-    public GameRoom(ILogger<GameRoom> logger, string id, int TickRate)
+    public GameRoom(ILogger<GameRoom> logger, DuelManager duels, string id, int TickRate)
     {
-        _logger = logger;
+        _logger = logger; _duels = duels;
         Id = id;
         _tickRate = TickRate;
     }
@@ -109,6 +110,7 @@ public sealed class GameRoom
 
     public void RemovePlayer(ClientConnection playerConnection)
     {
+        _duels.PlayerLeft(playerConnection.Id);
         lock (_playerGate)
         {
             if (_players.TryRemove(playerConnection.Id, out _))
@@ -152,7 +154,7 @@ public sealed class GameRoom
     private WorldState CreateSnapshot()
     {
         var playersState = new List<PlayerState>(_players.Count);
-        foreach (var client in _players.Values)
+        foreach (var client in _players.Values.Where(client => !_duels.IsInDuel(client.Id)))
         {
             var source = client.State;
             playersState.Add(new PlayerState
@@ -268,11 +270,36 @@ public sealed class GameRoom
             {
                 AwardQuiz(connection, quizPayload);
             }
+            else if (message?.Type == "pvpRequest" && message.Payload is JsonElement requestPayload && requestPayload.TryGetProperty("targetPlayerId", out var targetElement))
+            {
+                if (targetElement.GetString() is { } targetId && _players.TryGetValue(targetId, out var target)) _duels.Request(connection, target);
+            }
+            else if (message?.Type == "pvpResponse" && message.Payload is JsonElement responsePayload && responsePayload.TryGetProperty("fromPlayerId", out var fromElement))
+            {
+                var accepted = responsePayload.TryGetProperty("accepted", out var acceptedElement) && acceptedElement.GetBoolean();
+                _duels.Respond(connection, fromElement.GetString() is { } fromId && _players.TryGetValue(fromId, out var requester) ? requester : null, accepted);
+            }
+            else if (message?.Type == "duelInput" && message.Payload is JsonElement inputPayload)
+            {
+                if (TryReadDuelVector(inputPayload, out var moveX, out var moveZ, out var dirX, out var dirZ))
+                {
+                    _duels.Input(connection.Id, new DuelRoom.DuelInput(moveX, moveZ, dirX, dirZ));
+                }
+            }
+            else if (message?.Type == "duelShoot" && message.Payload is JsonElement shootPayload)
+            {
+                if (shootPayload.TryGetProperty("dirX", out var dirXElement) && dirXElement.TryGetSingle(out var dirX)
+                    && shootPayload.TryGetProperty("dirZ", out var dirZElement) && dirZElement.TryGetSingle(out var dirZ))
+                {
+                    _duels.Shoot(connection.Id, dirX, dirZ);
+                }
+            }
         }
     }
 
     private void ApplyPose(ClientConnection connection, JsonElement payload)
     {
+        if (_duels.IsInDuel(connection.Id)) return;
         PlayerPoseMessage? pose;
         try
         {
@@ -294,6 +321,15 @@ public sealed class GameRoom
         connection.State.FocusedPoster = pose.FocusedPoster;
         connection.State.Seated = pose.Seated;
         connection.State.TickId = _tickCounter;
+    }
+
+    private static bool TryReadDuelVector(JsonElement payload, out float moveX, out float moveZ, out float dirX, out float dirZ)
+    {
+        moveX = moveZ = dirX = dirZ = 0;
+        return payload.TryGetProperty("moveX", out var moveXElement) && moveXElement.TryGetSingle(out moveX)
+            && payload.TryGetProperty("moveZ", out var moveZElement) && moveZElement.TryGetSingle(out moveZ)
+            && payload.TryGetProperty("dirX", out var dirXElement) && dirXElement.TryGetSingle(out dirX)
+            && payload.TryGetProperty("dirZ", out var dirZElement) && dirZElement.TryGetSingle(out dirZ);
     }
 
     private void BroadcastChat(ClientConnection connection, JsonElement payload)

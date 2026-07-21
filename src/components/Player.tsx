@@ -37,6 +37,7 @@ export function Player() {
   const verticalVelocity = useRef(0)
   const jumping = useRef(false)
   const lastPoseUpdate = useRef(0)
+  const lastDuelInput = useRef(0)
   const walkPhase = useRef(0)
   const focusedSeatId = useRef<string | null>(null)
   const seatReturn = useRef<[number, number, number] | null>(null)
@@ -68,11 +69,21 @@ export function Player() {
       keys.current.add(event.code)
     }
     const up = (event: KeyboardEvent) => keys.current.delete(event.code)
+    const shoot = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.closest('button, input, textarea, select')) return
+      const store = useStore.getState()
+      if (!store.duel || !store.multiplayerPlayerId) return
+      camera.getWorldDirection(forward)
+      store.sendDuel('duelShoot', { dirX: forward.x, dirZ: forward.z })
+    }
     addEventListener('keydown', down)
     addEventListener('keyup', up)
+    addEventListener('mousedown', shoot)
     return () => {
       removeEventListener('keydown', down)
       removeEventListener('keyup', up)
+      removeEventListener('mousedown', shoot)
     }
   }, [camera])
 
@@ -89,6 +100,11 @@ export function Player() {
         store.stand()
         store.setQuizOpen(false)
         museumAudio.click()
+        return
+      }
+      const pvpTarget = Object.values(store.remotePlayers).find((player) => (player.x - store.playerPose.x) ** 2 + (player.z - store.playerPose.z) ** 2 <= 3.5 ** 2)
+      if (pvpTarget) {
+        store.requestPvp(pvpTarget.id)
         return
       }
       if (store.quizOpen) return
@@ -123,6 +139,22 @@ export function Player() {
     frameCamera.getWorldDirection(forward)
     forward.y = 0
     forward.normalize()
+
+    if (store.duel && store.multiplayerPlayerId) {
+      const self = store.duel.players[store.multiplayerPlayerId]
+      if (self) frameCamera.position.set(self.x, eyeHeight, self.z)
+      const forwardInput = (keys.current.has('KeyW') ? 1 : 0) - (keys.current.has('KeyS') ? 1 : 0)
+      const strafeInput = (keys.current.has('KeyD') ? 1 : 0) - (keys.current.has('KeyA') ? 1 : 0)
+      right.crossVectors(forward, frameCamera.up).normalize()
+      direction.set(0, 0, 0).addScaledVector(forward, forwardInput).addScaledVector(right, strafeInput)
+      if (direction.lengthSq() > 1) direction.normalize()
+      if (state.clock.elapsedTime - lastDuelInput.current > 1 / 32) {
+        frameCamera.getWorldDirection(forward)
+        store.sendDuel('duelInput', { moveX: direction.x, moveZ: direction.z, dirX: forward.x, dirZ: forward.z })
+        lastDuelInput.current = state.clock.elapsedTime
+      }
+      return
+    }
 
     if (!entered || activePoster || store.quizOpen) {
       if (activePoster && jumping.current) {

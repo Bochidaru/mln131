@@ -40,6 +40,9 @@ export interface ChatEntry {
   text: string
 }
 
+let outgoingActionId = 0
+const nextOutgoingActionId = () => ++outgoingActionId
+
 interface MuseumState {
   entered: boolean
   joining: boolean
@@ -73,6 +76,10 @@ interface MuseumState {
   chatOpen: boolean
   chatMessages: ChatEntry[]
   outgoingChat: { id: number; text: string } | null
+  pvpInvite: { fromPlayerId: string; name: string } | null
+  outgoingPvp: { id: number; type: 'pvpRequest' | 'pvpResponse'; payload: Record<string, unknown> } | null
+  duel: { id: string; opponent: string; players: Record<string, { x: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
+  outgoingDuel: { id: number; type: 'duelInput' | 'duelShoot'; payload: Record<string, number> } | null
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
   beginJoining: () => void
@@ -106,7 +113,15 @@ interface MuseumState {
   setChatOpen: (open: boolean) => void
   addChatMessage: (message: ChatEntry) => void
   queueChat: (text: string) => void
+  requestPvp: (targetPlayerId: string) => void
+  respondPvp: (fromPlayerId: string, accepted: boolean) => void
+  setPvpInvite: (invite: MuseumState['pvpInvite']) => void
+  startDuel: (id: string, opponent: string) => void
+  setDuelSnapshot: (players: NonNullable<MuseumState['duel']>['players']) => void
+  endDuel: () => void
+  sendDuel: (type: 'duelInput' | 'duelShoot', payload: Record<string, number>) => void
   upsertRemotePlayers: (players: RemotePlayer[]) => void
+  replaceRemotePlayers: (players: RemotePlayer[]) => void
   removeRemotePlayer: (playerId: string) => void
   clearRemotePlayers: () => void
 }
@@ -144,6 +159,10 @@ export const useStore = create<MuseumState>((set) => ({
   chatOpen: false,
   chatMessages: [],
   outgoingChat: null,
+  pvpInvite: null,
+  outgoingPvp: null,
+  duel: null,
+  outgoingDuel: null,
   remotePlayers: {},
   enter: () => set({ entered: true, joining: false, joinError: null }),
   beginJoining: () => set({ joining: true, joinError: null }),
@@ -181,10 +200,17 @@ export const useStore = create<MuseumState>((set) => ({
   setQuizOpen: (quizOpen) => set((state) => ({ quizOpen, quizSession: quizOpen ? state.quizSession + 1 : state.quizSession, quizResult: quizOpen ? null : state.quizResult })),
   setQuizResult: (quizResult) => set({ quizResult }),
   setQuizCooldown: (roomId, availableAt) => set((state) => ({ quizCooldowns: { ...state.quizCooldowns, [roomId]: availableAt } })),
-  submitQuiz: (roomId, correct) => set({ outgoingQuiz: { id: Date.now(), roomId, correct }, quizOpen: false }),
+  submitQuiz: (roomId, correct) => set({ outgoingQuiz: { id: nextOutgoingActionId(), roomId, correct }, quizOpen: false }),
   setChatOpen: (chatOpen) => set({ chatOpen }),
   addChatMessage: (message) => set((state) => ({ chatMessages: [...state.chatMessages, message].slice(-60) })),
-  queueChat: (text) => set({ outgoingChat: { id: Date.now(), text } }),
+  queueChat: (text) => set({ outgoingChat: { id: nextOutgoingActionId(), text } }),
+  requestPvp: (targetPlayerId) => set({ outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpRequest', payload: { targetPlayerId } } }),
+  respondPvp: (fromPlayerId, accepted) => set({ outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpResponse', payload: { fromPlayerId, accepted } }, pvpInvite: null }),
+  setPvpInvite: (pvpInvite) => set({ pvpInvite }),
+  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, seated: null, quizOpen: false, pvpInvite: null }),
+  setDuelSnapshot: (players) => set((state) => state.duel ? { duel: { ...state.duel, players } } : state),
+  endDuel: () => set({ duel: null, pvpInvite: null }),
+  sendDuel: (type, payload) => set({ outgoingDuel: { id: nextOutgoingActionId(), type, payload } }),
   upsertRemotePlayers: (players) => set((state) => {
     const remotePlayers = { ...state.remotePlayers }
     for (const player of players) {
@@ -192,6 +218,11 @@ export const useStore = create<MuseumState>((set) => ({
     }
     return { remotePlayers }
   }),
+  replaceRemotePlayers: (players) => set((state) => ({
+    remotePlayers: Object.fromEntries(players
+      .filter((player) => player.id !== state.multiplayerPlayerId)
+      .map((player) => [player.id, player])),
+  })),
   removeRemotePlayer: (playerId) => set((state) => {
     const remotePlayers = { ...state.remotePlayers }
     delete remotePlayers[playerId]

@@ -7,6 +7,9 @@ import { AudioController } from './AudioController'
 import { ContentPanel } from './ContentPanel'
 import { ChatPanel } from './ChatPanel'
 import { QuizPanel } from './QuizPanel'
+import { PvpPanel } from './PvpPanel'
+import { DuelArena } from './DuelArena'
+import { DuelHud } from './DuelHud'
 import { Exterior } from './Exterior'
 import { HUD } from './HUD'
 import { Minimap } from './Minimap'
@@ -79,6 +82,7 @@ export function MuseumScene() {
       </Suspense>
       <Player />
       <RemotePlayers />
+      <DuelArena />
       {lowEndDevice ? <></> : <PostEffects mediumQuality={mediumQuality} />}
     </Canvas>
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
@@ -86,6 +90,8 @@ export function MuseumScene() {
     <HUD />
     <ChatPanel />
     <QuizPanel />
+    <PvpPanel />
+    <DuelHud />
     <Minimap />
     <MobileControls />
     <ContentPanel />
