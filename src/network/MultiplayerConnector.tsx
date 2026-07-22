@@ -33,6 +33,10 @@ type ServerMessage = {
     text?: string
     name?: string
     fromPlayerId?: string
+    targetPlayerId?: string
+    targetName?: string
+    expiresAt?: string
+    cooldownUntil?: string
     duelId?: string
     opponent?: string
     winnerId?: string
@@ -242,7 +246,25 @@ export function MultiplayerConnector() {
         store.setQuizCooldown(message.payload.quizRoomId, Date.parse(message.payload.availableAt))
       }
 
-      if (message.type === 'pvpInvite' && message.payload?.fromPlayerId && message.payload.name) store.setPvpInvite({ fromPlayerId: message.payload.fromPlayerId, name: message.payload.name })
+      if (message.type === 'pvpInvite' && message.payload?.fromPlayerId && message.payload.name && message.payload.expiresAt) {
+        store.setPvpInvite({ fromPlayerId: message.payload.fromPlayerId, name: message.payload.name, expiresAt: Date.parse(message.payload.expiresAt) })
+      }
+      if (message.type === 'pvpInviteSent' && message.payload?.targetPlayerId && message.payload.targetName && message.payload.expiresAt) {
+        store.setPvpOutgoingInvite({ targetPlayerId: message.payload.targetPlayerId, name: message.payload.targetName, expiresAt: Date.parse(message.payload.expiresAt) })
+        if (message.payload.cooldownUntil) store.setPvpCooldownUntil(Date.parse(message.payload.cooldownUntil))
+      }
+      if (message.type === 'pvpCooldown' && message.payload?.cooldownUntil) {
+        store.setPvpCooldownUntil(Date.parse(message.payload.cooldownUntil))
+        store.setPvpOutgoingInvite(null)
+      }
+      if (message.type === 'pvpDeclined' || message.type === 'pvpRequestRejected') {
+        store.setPvpOutgoingInvite(null)
+        if (message.type === 'pvpRequestRejected') store.setPvpCooldownUntil(0)
+      }
+      if (message.type === 'pvpInviteExpired') {
+        if (message.payload?.fromPlayerId && store.pvpInvite?.fromPlayerId === message.payload.fromPlayerId) store.setPvpInvite(null)
+        if (message.payload?.targetPlayerId && store.pvpOutgoingInvite?.targetPlayerId === message.payload.targetPlayerId) store.setPvpOutgoingInvite(null)
+      }
       if (message.type === 'duelStart' && message.payload?.duelId && message.payload.opponent) store.startDuel(message.payload.duelId, message.payload.opponent)
       if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, player])))
       if (message.type === 'duelShot' && message.payload?.shotId && message.payload.shooterId

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { PosterData } from '../data/content'
 import { getAreaAt, type MuseumArea } from '../data/layout'
+import { detectAutoGraphicsQuality, type GraphicsQuality, type ResolvedGraphicsQuality } from '../utils/graphicsQuality'
 
 export interface PlayerPose {
   x: number
@@ -55,7 +56,10 @@ export interface DuelShot {
 let outgoingActionId = 0
 const nextOutgoingActionId = () => ++outgoingActionId
 const savedGraphicsQuality = window.localStorage.getItem('mln131-graphics-quality')
-const initialGraphicsQuality: 'low' | 'high' = savedGraphicsQuality === 'high' ? 'high' : 'low'
+const initialGraphicsQuality: GraphicsQuality = savedGraphicsQuality === 'low' || savedGraphicsQuality === 'high'
+  ? savedGraphicsQuality
+  : 'auto'
+const autoGraphicsQuality = detectAutoGraphicsQuality()
 
 interface MuseumState {
   entered: boolean
@@ -78,7 +82,8 @@ interface MuseumState {
   playerName: string
   avatarId: string
   mouseSensitivity: number
-  graphicsQuality: 'low' | 'high'
+  graphicsQuality: GraphicsQuality
+  autoGraphicsQuality: ResolvedGraphicsQuality
   settingsOpen: boolean
   entranceDoorOpen: boolean
   score: number
@@ -91,7 +96,9 @@ interface MuseumState {
   chatOpen: boolean
   chatMessages: ChatEntry[]
   outgoingChat: { id: number; text: string } | null
-  pvpInvite: { fromPlayerId: string; name: string } | null
+  pvpInvite: { fromPlayerId: string; name: string; expiresAt: number } | null
+  pvpOutgoingInvite: { targetPlayerId: string; name: string; expiresAt: number } | null
+  pvpCooldownUntil: number
   outgoingPvp: { id: number; type: 'pvpRequest' | 'pvpResponse'; payload: Record<string, unknown> } | null
   duel: { id: string; opponent: string; players: Record<string, { x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
   duelReturnPose: PlayerPose | null
@@ -119,7 +126,7 @@ interface MuseumState {
   setPlayerName: (name: string) => void
   setAvatarId: (avatarId: string) => void
   setMouseSensitivity: (sensitivity: number) => void
-  setGraphicsQuality: (quality: 'low' | 'high') => void
+  setGraphicsQuality: (quality: GraphicsQuality) => void
   setSettingsOpen: (open: boolean) => void
   setEntranceDoorOpen: (open: boolean) => void
   setScore: (score: number) => void
@@ -131,9 +138,11 @@ interface MuseumState {
   setChatOpen: (open: boolean) => void
   addChatMessage: (message: ChatEntry) => void
   queueChat: (text: string) => void
-  requestPvp: (targetPlayerId: string) => void
+  requestPvp: (targetPlayerId: string, name: string) => void
   respondPvp: (fromPlayerId: string, accepted: boolean) => void
   setPvpInvite: (invite: MuseumState['pvpInvite']) => void
+  setPvpOutgoingInvite: (invite: MuseumState['pvpOutgoingInvite']) => void
+  setPvpCooldownUntil: (until: number) => void
   startDuel: (id: string, opponent: string) => void
   setDuelSnapshot: (players: NonNullable<MuseumState['duel']>['players']) => void
   setDuelShot: (shot: DuelShot) => void
@@ -169,6 +178,7 @@ export const useStore = create<MuseumState>((set) => ({
   avatarId: 'block-explorer',
   mouseSensitivity: 1,
   graphicsQuality: initialGraphicsQuality,
+  autoGraphicsQuality,
   settingsOpen: false,
   entranceDoorOpen: false,
   score: 0,
@@ -182,6 +192,8 @@ export const useStore = create<MuseumState>((set) => ({
   chatMessages: [],
   outgoingChat: null,
   pvpInvite: null,
+  pvpOutgoingInvite: null,
+  pvpCooldownUntil: 0,
   outgoingPvp: null,
   duel: null,
   duelReturnPose: null,
@@ -232,13 +244,24 @@ export const useStore = create<MuseumState>((set) => ({
   setChatOpen: (chatOpen) => set({ chatOpen }),
   addChatMessage: (message) => set((state) => ({ chatMessages: [...state.chatMessages, message].slice(-60) })),
   queueChat: (text) => set({ outgoingChat: { id: nextOutgoingActionId(), text } }),
-  requestPvp: (targetPlayerId) => set({ outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpRequest', payload: { targetPlayerId } } }),
+  requestPvp: (targetPlayerId, name) => set((state) => {
+    const now = Date.now()
+    if (state.pvpOutgoingInvite || state.pvpCooldownUntil > now) return state
+    const expiresAt = now + 10_000
+    return {
+      outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpRequest', payload: { targetPlayerId } },
+      pvpOutgoingInvite: { targetPlayerId, name, expiresAt },
+      pvpCooldownUntil: expiresAt,
+    }
+  }),
   respondPvp: (fromPlayerId, accepted) => set({ outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpResponse', payload: { fromPlayerId, accepted } }, pvpInvite: null }),
   setPvpInvite: (pvpInvite) => set({ pvpInvite }),
-  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, duelShot: null, seated: null, quizOpen: false, pvpInvite: null }),
+  setPvpOutgoingInvite: (pvpOutgoingInvite) => set({ pvpOutgoingInvite }),
+  setPvpCooldownUntil: (pvpCooldownUntil) => set({ pvpCooldownUntil }),
+  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, duelShot: null, seated: null, quizOpen: false, pvpInvite: null, pvpOutgoingInvite: null }),
   setDuelSnapshot: (players) => set((state) => state.duel ? { duel: { ...state.duel, players } } : state),
   setDuelShot: (duelShot) => set({ duelShot }),
-  endDuel: (duelReturnPose) => set({ duel: null, duelShot: null, pvpInvite: null, duelReturnPose: duelReturnPose ?? null }),
+  endDuel: (duelReturnPose) => set({ duel: null, duelShot: null, pvpInvite: null, pvpOutgoingInvite: null, duelReturnPose: duelReturnPose ?? null }),
   clearDuelReturnPose: () => set({ duelReturnPose: null }),
   sendDuel: (type, payload = {}) => set({ outgoingDuel: { id: nextOutgoingActionId(), type, payload } }),
   forfeitDuel: () => set((state) => state.duel ? { outgoingDuel: { id: nextOutgoingActionId(), type: 'duelForfeit', payload: {} } } : state),

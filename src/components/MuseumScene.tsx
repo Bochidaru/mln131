@@ -32,7 +32,8 @@ function PostEffects() {
 
 export function MuseumScene() {
   const graphicsQuality = useStore((state) => state.graphicsQuality)
-  const lowEndDevice = graphicsQuality === 'low'
+  const autoGraphicsQuality = useStore((state) => state.autoGraphicsQuality)
+  const lowEndDevice = (graphicsQuality === 'auto' ? autoGraphicsQuality : graphicsQuality) === 'low'
   const duelActive = useStore((state) => Boolean(state.duel))
 
   return <main className="museum">

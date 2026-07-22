@@ -28,6 +28,7 @@ export function HUD() {
   const mouseSensitivity = useStore((state) => state.mouseSensitivity)
   const setMouseSensitivity = useStore((state) => state.setMouseSensitivity)
   const graphicsQuality = useStore((state) => state.graphicsQuality)
+  const autoGraphicsQuality = useStore((state) => state.autoGraphicsQuality)
   const setGraphicsQuality = useStore((state) => state.setGraphicsQuality)
   const settingsOpen = useStore((state) => state.settingsOpen)
   const setSettingsOpen = useStore((state) => state.setSettingsOpen)
@@ -94,8 +95,8 @@ export function HUD() {
       <button className="settings-toggle" onClick={() => setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen}>⚙ <span>Cài đặt</span></button>
       {settingsOpen && <section className="settings-panel" aria-label="Cài đặt">
         <strong>Cài đặt</strong>
-        <div className="settings-section"><span>Hiệu năng</span><p>Chế độ Yếu giảm mạnh hiệu ứng, bóng và cảnh nền để phù hợp GPU yếu.</p>
-          <div>{(['low', 'high'] as const).map((quality) => <button key={quality} className={graphicsQuality === quality ? 'is-selected' : ''} onClick={() => setGraphicsQuality(quality)}>{quality === 'low' ? 'Yếu' : 'Cao'}</button>)}</div>
+        <div className="settings-section"><span>Hiệu năng</span><p>Auto đang chọn {autoGraphicsQuality === 'high' ? 'Cao' : 'Yếu'} theo GPU. Bạn vẫn có thể chọn thủ công.</p>
+          <div>{(['auto', 'low', 'high'] as const).map((quality) => <button key={quality} className={graphicsQuality === quality ? 'is-selected' : ''} onClick={() => setGraphicsQuality(quality)}>{quality === 'auto' ? 'Auto' : quality === 'low' ? 'Yếu' : 'Cao'}</button>)}</div>
         </div>
         <div className="settings-section sensitivity-setting"><span>Độ nhạy chuột <b>{Math.round(mouseSensitivity * 100)}%</b></span><input type="range" min="0.25" max="2" step="0.05" value={mouseSensitivity} onChange={(event) => setMouseSensitivity(Number(event.target.value))} aria-label="Độ nhạy chuột" /></div>
         <div className="settings-section"><span>Âm thanh</span><button className="setting-audio" onClick={toggleAudio} aria-label={audioOn ? uiText.audioOn : uiText.audioOff}>{audioOn ? 'Âm thanh: Bật' : 'Âm thanh: Tắt'}</button></div>

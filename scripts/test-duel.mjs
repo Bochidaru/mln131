@@ -62,12 +62,23 @@ class TestClient {
 const suffix = Date.now().toString(36)
 const first = new TestClient(`DuelTest-A-${suffix}`)
 const second = new TestClient(`DuelTest-B-${suffix}`)
+const third = new TestClient(`DuelTest-C-${suffix}`)
+const fourth = new TestClient(`DuelTest-D-${suffix}`)
 
 try {
   await first.connect()
   await second.connect()
   first.send('pvpRequest', { targetPlayerId: second.id })
-  await second.waitFor('pvpInvite', (message) => message.payload?.fromPlayerId === first.id)
+  const [sent, received] = await Promise.all([
+    first.waitFor('pvpInviteSent', (message) => message.payload?.targetPlayerId === second.id),
+    second.waitFor('pvpInvite', (message) => message.payload?.fromPlayerId === first.id),
+  ])
+  assert.ok(Date.parse(sent.payload.expiresAt) > Date.now())
+  assert.equal(sent.payload.expiresAt, sent.payload.cooldownUntil)
+  assert.equal(received.payload.expiresAt, sent.payload.expiresAt)
+  first.send('pvpRequest', { targetPlayerId: second.id })
+  const cooldown = await first.waitFor('pvpCooldown')
+  assert.ok(Date.parse(cooldown.payload.cooldownUntil) > Date.now())
   second.send('pvpResponse', { fromPlayerId: first.id, accepted: true })
   await Promise.all([first.waitFor('duelStart'), second.waitFor('duelStart')])
 
@@ -113,8 +124,20 @@ try {
   const result = await first.waitFor('duelResult')
   assert.equal(result.payload.winnerId, first.id)
   assert.ok(result.payload.returnPose)
-  console.log('Duel smoke test passed: movement, server hit, shot event, forfeit, and return pose.')
+
+  await third.connect()
+  await fourth.connect()
+  third.send('pvpRequest', { targetPlayerId: fourth.id })
+  await fourth.waitFor('pvpInvite', (message) => message.payload?.fromPlayerId === third.id)
+  await Promise.all([
+    third.waitFor('pvpInviteExpired', (message) => message.payload?.targetPlayerId === fourth.id, 12_000),
+    fourth.waitFor('pvpInviteExpired', (message) => message.payload?.fromPlayerId === third.id, 12_000),
+  ])
+
+  console.log('Duel smoke test passed: invite cooldown/expiry, movement, server hit, shot event, forfeit, and return pose.')
 } finally {
   first.close()
   second.close()
+  third.close()
+  fourth.close()
 }

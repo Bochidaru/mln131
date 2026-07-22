@@ -105,7 +105,7 @@ export function Player() {
       }
       const pvpTarget = Object.values(store.remotePlayers).find((player) => (player.x - store.playerPose.x) ** 2 + (player.z - store.playerPose.z) ** 2 <= 3.5 ** 2)
       if (pvpTarget) {
-        store.requestPvp(pvpTarget.id)
+        store.requestPvp(pvpTarget.id, pvpTarget.name)
         return
       }
       if (store.quizOpen) return
