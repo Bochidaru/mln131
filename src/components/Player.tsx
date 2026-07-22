@@ -77,7 +77,7 @@ export function Player() {
       const target = event.target as HTMLElement | null
       if (target?.closest('button, input, textarea, select')) return
       const store = useStore.getState()
-      if (!store.duel || !store.multiplayerPlayerId) return
+      if (!store.duel || store.duelFinished || !store.multiplayerPlayerId) return
       camera.getWorldDirection(forward)
       store.sendDuel('duelShoot', { dirX: forward.x, dirZ: forward.z })
     }
@@ -154,6 +154,7 @@ export function Player() {
     if (store.duel && store.multiplayerPlayerId) {
       const self = store.duel.players[store.multiplayerPlayerId]
       if (self) frameCamera.position.set(self.x, self.y, self.z)
+      if (store.duelFinished) return
       const forwardInput = (keys.current.has('KeyW') ? 1 : 0) - (keys.current.has('KeyS') ? 1 : 0)
       const strafeInput = (keys.current.has('KeyD') ? 1 : 0) - (keys.current.has('KeyA') ? 1 : 0)
       right.crossVectors(forward, frameCamera.up).normalize()

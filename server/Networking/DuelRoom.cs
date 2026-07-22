@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net.WebSockets;
 using System.Numerics;
 using server.Models;
 
@@ -8,6 +9,7 @@ namespace server.Networking;
 public sealed class DuelRoom
 {
     public const int TickRate = 64;
+    private static readonly TimeSpan ResultDisplayDuration = TimeSpan.FromSeconds(3);
     private const float ArenaLimit = 28f;
     private const float ArenaX = 200f;
     private const float ArenaZ = 200f;
@@ -61,11 +63,14 @@ public sealed class DuelRoom
 
     public void Start() => _loop = Task.Run(() => Loop(_cts.Token));
 
-    public void SetInput(string playerId, DuelInput input) => _inputs[playerId] = input;
+    public void SetInput(string playerId, DuelInput input)
+    {
+        if (Volatile.Read(ref _hasFinished) == 0) _inputs[playerId] = input;
+    }
 
     public void Shoot(string playerId, float dirX, float dirZ)
     {
-        if (!Contains(playerId) || _lastShot.TryGetValue(playerId, out var last) && DateTimeOffset.UtcNow - last < TimeSpan.FromMilliseconds(250)) return;
+        if (Volatile.Read(ref _hasFinished) != 0 || !Contains(playerId) || _lastShot.TryGetValue(playerId, out var last) && DateTimeOffset.UtcNow - last < TimeSpan.FromMilliseconds(250)) return;
         _lastShot[playerId] = DateTimeOffset.UtcNow;
         var shooter = playerId == _first.Id ? _first : _second;
         var target = playerId == _first.Id ? _second : _first;
@@ -194,27 +199,61 @@ public sealed class DuelRoom
     {
         if (Interlocked.Exchange(ref _hasFinished, 1) != 0) return;
         _cts.Cancel();
+        var winner = winnerId == _first.Id ? _first : _second;
         var loser = winnerId == _first.Id ? _second : _first;
+        if (aborted && _wins[winnerId] < 3) _wins[winnerId] = 3;
         var transfer = Math.Min(5, loser.State.Score);
-        loser.State.Score -= transfer; (winnerId == _first.Id ? _first : _second).State.Score += transfer;
-        Restore(_first); Restore(_second);
-        _ = Task.WhenAll(
-            SendResultAsync(_first, winnerId, transfer, aborted),
-            SendResultAsync(_second, winnerId, transfer, aborted));
+        loser.State.Score -= transfer;
+        winner.State.Score += transfer;
+        _ = CompleteAfterResultDisplayAsync(winner, loser, transfer, aborted);
+    }
+
+    private async Task CompleteAfterResultDisplayAsync(ClientConnection winner, ClientConnection loser, int transfer, bool aborted)
+    {
+        var returnsAt = DateTimeOffset.UtcNow.Add(ResultDisplayDuration);
+        await Task.WhenAll(
+            SendFinishedAsync(_first, winner, loser, transfer, aborted, returnsAt),
+            SendFinishedAsync(_second, winner, loser, transfer, aborted, returnsAt));
+
+        await Task.Delay(ResultDisplayDuration);
+        Restore(_first);
+        Restore(_second);
+        await Task.WhenAll(SendResultAsync(_first, winner.Id), SendResultAsync(_second, winner.Id));
         _finished(this);
     }
 
-    private Task SendResultAsync(ClientConnection player, string winnerId, int transfer, bool aborted)
-    {
-        var pose = _returnPoses[player.Id];
-        return player.SendAsync("duelResult", new
+    private Task SendFinishedAsync(ClientConnection player, ClientConnection winner, ClientConnection loser, int transfer, bool aborted, DateTimeOffset returnsAt) =>
+        SafeSendAsync(player, "duelFinished", new
         {
-            winnerId,
+            winnerId = winner.Id,
+            winnerName = winner.State.Name,
+            winnerWins = _wins[winner.Id],
+            winnerScore = winner.State.Score,
+            loserId = loser.Id,
+            loserName = loser.State.Name,
+            loserWins = _wins[loser.Id],
+            loserScore = loser.State.Score,
             transfer,
             aborted,
+            returnsAt
+        });
+
+    private Task SendResultAsync(ClientConnection player, string winnerId)
+    {
+        var pose = _returnPoses[player.Id];
+        return SafeSendAsync(player, "duelResult", new
+        {
+            winnerId,
             score = player.State.Score,
             returnPose = new { x = pose.X, z = pose.Z, dirX = pose.DirX, dirZ = pose.DirZ }
-        }, CancellationToken.None);
+        });
+    }
+
+    private static async Task SafeSendAsync(ClientConnection player, string type, object payload)
+    {
+        try { await player.SendAsync(type, payload, CancellationToken.None); }
+        catch (WebSocketException) { }
+        catch (ObjectDisposedException) { }
     }
 
     private static bool HitsCover(float x, float z)

@@ -53,6 +53,20 @@ export interface DuelShot {
   hit: boolean
 }
 
+export interface DuelFinished {
+  winnerId: string
+  winnerName: string
+  winnerWins: number
+  winnerScore: number
+  loserId: string
+  loserName: string
+  loserWins: number
+  loserScore: number
+  transfer: number
+  aborted: boolean
+  returnsAt: number
+}
+
 let outgoingActionId = 0
 const nextOutgoingActionId = () => ++outgoingActionId
 const savedGraphicsQuality = window.localStorage.getItem('mln131-graphics-quality')
@@ -103,6 +117,7 @@ interface MuseumState {
   duel: { id: string; opponent: string; players: Record<string, { x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
   duelReturnPose: PlayerPose | null
   duelShot: DuelShot | null
+  duelFinished: DuelFinished | null
   outgoingDuel: { id: number; type: 'duelInput' | 'duelShoot' | 'duelForfeit'; payload: Record<string, number> } | null
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
@@ -146,6 +161,7 @@ interface MuseumState {
   startDuel: (id: string, opponent: string) => void
   setDuelSnapshot: (players: NonNullable<MuseumState['duel']>['players']) => void
   setDuelShot: (shot: DuelShot) => void
+  setDuelFinished: (result: DuelFinished) => void
   endDuel: (returnPose?: PlayerPose) => void
   clearDuelReturnPose: () => void
   sendDuel: (type: 'duelInput' | 'duelShoot' | 'duelForfeit', payload?: Record<string, number>) => void
@@ -198,6 +214,7 @@ export const useStore = create<MuseumState>((set) => ({
   duel: null,
   duelReturnPose: null,
   duelShot: null,
+  duelFinished: null,
   outgoingDuel: null,
   remotePlayers: {},
   enter: () => set({ entered: true, joining: false, joinError: null }),
@@ -258,10 +275,11 @@ export const useStore = create<MuseumState>((set) => ({
   setPvpInvite: (pvpInvite) => set({ pvpInvite }),
   setPvpOutgoingInvite: (pvpOutgoingInvite) => set({ pvpOutgoingInvite }),
   setPvpCooldownUntil: (pvpCooldownUntil) => set({ pvpCooldownUntil }),
-  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, duelShot: null, seated: null, quizOpen: false, pvpInvite: null, pvpOutgoingInvite: null }),
+  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, duelShot: null, duelFinished: null, seated: null, quizOpen: false, pvpInvite: null, pvpOutgoingInvite: null }),
   setDuelSnapshot: (players) => set((state) => state.duel ? { duel: { ...state.duel, players } } : state),
   setDuelShot: (duelShot) => set({ duelShot }),
-  endDuel: (duelReturnPose) => set({ duel: null, duelShot: null, pvpInvite: null, pvpOutgoingInvite: null, duelReturnPose: duelReturnPose ?? null }),
+  setDuelFinished: (duelFinished) => set({ duelFinished }),
+  endDuel: (duelReturnPose) => set({ duel: null, duelShot: null, duelFinished: null, pvpInvite: null, pvpOutgoingInvite: null, duelReturnPose: duelReturnPose ?? null }),
   clearDuelReturnPose: () => set({ duelReturnPose: null }),
   sendDuel: (type, payload = {}) => set({ outgoingDuel: { id: nextOutgoingActionId(), type, payload } }),
   forfeitDuel: () => set((state) => state.duel ? { outgoingDuel: { id: nextOutgoingActionId(), type: 'duelForfeit', payload: {} } } : state),

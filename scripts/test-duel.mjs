@@ -129,9 +129,19 @@ try {
   assert.equal(damaged.payload.duelPlayers.find((player) => player.playerId === second.id).hp, 66)
 
   second.send('duelForfeit')
-  const result = await first.waitFor('duelResult')
+  const finishedAt = Date.now()
+  const [firstFinished, secondFinished] = await Promise.all([
+    first.waitFor('duelFinished', (message) => message.payload?.winnerId === first.id),
+    second.waitFor('duelFinished', (message) => message.payload?.winnerId === first.id),
+  ])
+  assert.equal(firstFinished.payload.winnerName, first.name)
+  assert.equal(firstFinished.payload.loserName, second.name)
+  assert.equal(firstFinished.payload.winnerWins, 3)
+  assert.equal(secondFinished.payload.winnerScore, firstFinished.payload.winnerScore)
+  const result = await first.waitFor('duelResult', () => true, 5_000)
   assert.equal(result.payload.winnerId, first.id)
   assert.ok(result.payload.returnPose)
+  assert.ok(Date.now() - finishedAt >= 2_800, 'The result screen must stay visible for three seconds before returning players')
 
   await third.connect()
   await fourth.connect()
@@ -142,7 +152,7 @@ try {
     fourth.waitFor('pvpInviteExpired', (message) => message.payload?.fromPlayerId === third.id, 12_000),
   ])
 
-  console.log('Duel smoke test passed: invite cooldown/expiry, movement, jump, server hit, shot event, forfeit, and return pose.')
+  console.log('Duel smoke test passed: invite cooldown/expiry, movement, jump, server hit, shared result screen, delayed return pose.')
 } finally {
   first.close()
   second.close()

@@ -40,7 +40,16 @@ type ServerMessage = {
     duelId?: string
     opponent?: string
     winnerId?: string
+    winnerName?: string
+    winnerWins?: number
+    winnerScore?: number
+    loserId?: string
+    loserName?: string
+    loserWins?: number
+    loserScore?: number
     transfer?: number
+    aborted?: boolean
+    returnsAt?: string
     returnPose?: { x: number; z: number; dirX: number; dirZ: number }
     duelPlayers?: { playerId: string; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
     shotId?: string
@@ -280,6 +289,22 @@ export function MultiplayerConnector() {
           endY: message.payload.endY,
           endZ: message.payload.endZ,
           hit: Boolean(message.payload.hit),
+        })
+      }
+      if (message.type === 'duelFinished' && message.payload?.winnerId && message.payload.winnerName
+        && message.payload.loserId && message.payload.loserName && message.payload.returnsAt) {
+        store.setDuelFinished({
+          winnerId: message.payload.winnerId,
+          winnerName: message.payload.winnerName,
+          winnerWins: message.payload.winnerWins ?? 3,
+          winnerScore: message.payload.winnerScore ?? 0,
+          loserId: message.payload.loserId,
+          loserName: message.payload.loserName,
+          loserWins: message.payload.loserWins ?? 0,
+          loserScore: message.payload.loserScore ?? 0,
+          transfer: message.payload.transfer ?? 0,
+          aborted: Boolean(message.payload.aborted),
+          returnsAt: Date.parse(message.payload.returnsAt),
         })
       }
       if (message.type === 'duelResult') {
