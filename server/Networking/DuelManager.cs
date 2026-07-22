@@ -50,6 +50,11 @@ public sealed class DuelManager
         if (_playerDuels.TryGetValue(playerId, out var id) && _duels.TryGetValue(id, out var duel)) duel.Shoot(playerId, dirX, dirZ);
     }
 
+    public void Forfeit(string playerId)
+    {
+        if (_playerDuels.TryGetValue(playerId, out var id) && _duels.TryGetValue(id, out var duel)) duel.Forfeit(playerId);
+    }
+
     public void PlayerLeft(string playerId)
     {
         if (_playerDuels.TryGetValue(playerId, out var id) && _duels.TryGetValue(id, out var duel)) duel.Abort(playerId);

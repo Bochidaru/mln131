@@ -19,6 +19,7 @@ import { Player } from './Player'
 import { RemotePlayers } from './RemotePlayers'
 import { Surroundings } from './Surroundings'
 import { MultiplayerConnector } from '../network/MultiplayerConnector'
+import { useStore } from '../store/useStore'
 
 function PostEffects() {
   return <EffectComposer multisampling={0}>
@@ -32,15 +33,16 @@ function PostEffects() {
 export function MuseumScene() {
   // Keep the museum usable on integrated graphics and older laptops.
   const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+  const graphicsQuality = useStore((state) => state.graphicsQuality)
   const autoLowEnd = navigator.hardwareConcurrency <= 4 || (deviceMemory !== undefined && deviceMemory <= 4)
-  const lowEndDevice = autoLowEnd
+  const lowEndDevice = graphicsQuality === 'low' || autoLowEnd
 
   return <main className="museum">
     <Canvas
       id="museum-canvas"
-      camera={{ fov: 58, near: 0.08, far: 190 }}
-      dpr={lowEndDevice ? [1, 1.15] : [1, 1.65]}
-      gl={{ antialias: false, powerPreference: 'high-performance', alpha: false }}
+      camera={{ fov: 58, near: 0.08, far: lowEndDevice ? 115 : 190 }}
+      dpr={lowEndDevice ? [0.7, 1] : [1, 1.65]}
+      gl={{ antialias: false, powerPreference: 'high-performance', alpha: false, precision: lowEndDevice ? 'mediump' : 'highp' }}
       shadows={lowEndDevice ? false : { type: PCFSoftShadowMap }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
@@ -70,11 +72,10 @@ export function MuseumScene() {
       <pointLight position={[0, 5.2, 10.5]} color="#ffdca6" intensity={8} distance={18} decay={2} />
 
       <Suspense fallback={null}>
-        <Surroundings />
+        <Surroundings lowEnd={lowEndDevice} />
         <Exterior />
         <MuseumInterior />
-        <Environment files="/textures/env.hdr" environmentIntensity={0.42} />
-        <BakeShadows />
+        {lowEndDevice ? <></> : <><Environment files="/textures/env.hdr" environmentIntensity={0.42} /><BakeShadows /></>}
       </Suspense>
       <Player />
       <RemotePlayers />

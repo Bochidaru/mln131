@@ -668,7 +668,7 @@ function Pedestrians({ walkers }: { walkers: WalkerSpec[] }) {
   </>
 }
 
-export function Surroundings() {
+export function Surroundings({ lowEnd = false }: { lowEnd?: boolean }) {
   const buildings = useMemo(() => makeBuildings(), [])
   const vehicles = useMemo(() => makeVehicles(), [])
   const walkers = useMemo(() => makeWalkers(), [])
@@ -682,11 +682,13 @@ export function Surroundings() {
     <StaticBoxes items={cityBlocks} color="#aaa9a3" roughness={1} />
     <StaticBoxes items={roads} color="#303536" roughness={0.96} />
     <StaticBoxes items={sidewalks} color="#b9b8b1" roughness={0.94} />
-    <StaticBoxes items={roadMarkings} color="#d7d1b2" roughness={0.72} />
-    <CityBuildings buildings={buildings} />
-    <StreetTrees />
-    <StreetLights />
-    <Traffic vehicles={vehicles} />
-    <Pedestrians walkers={walkers} />
+    {lowEnd ? <></> : <>
+      <StaticBoxes items={roadMarkings} color="#d7d1b2" roughness={0.72} />
+      <CityBuildings buildings={buildings} />
+      <StreetTrees />
+      <StreetLights />
+      <Traffic vehicles={vehicles} />
+      <Pedestrians walkers={walkers} />
+    </>}
   </group>
 }

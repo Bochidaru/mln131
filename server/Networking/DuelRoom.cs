@@ -8,7 +8,7 @@ namespace server.Networking;
 public sealed class DuelRoom
 {
     public const int TickRate = 64;
-    private const float ArenaLimit = 13f;
+    private const float ArenaLimit = 28f;
     private const float ArenaX = 200f;
     private const float ArenaZ = 200f;
     private const float MoveSpeed = 5f;
@@ -33,11 +33,11 @@ public sealed class DuelRoom
     // These boxes match the cover rendered by DuelArena on the client.
     private static readonly (float X, float Z, float HalfX, float HalfZ)[] Cover =
     [
-        (0, 0, 1.25f, 0.6f),
-        (-6, -5, 1.25f, 0.6f),
-        (6, 5, 1.25f, 0.6f),
-        (-5, 6, 1.25f, 0.6f),
-        (5, -6, 1.25f, 0.6f),
+        (0, 0, 2.2f, 0.8f),
+        (-12, -10, 2.2f, 0.8f), (12, 10, 2.2f, 0.8f),
+        (-12, 12, 2.2f, 0.8f), (12, -12, 2.2f, 0.8f),
+        (0, -18, 2.2f, 0.8f), (0, 18, 2.2f, 0.8f),
+        (-20, 0, 2.2f, 0.8f), (20, 0, 2.2f, 0.8f),
     ];
 
     public string Id { get; } = Guid.NewGuid().ToString("N");
@@ -81,6 +81,12 @@ public sealed class DuelRoom
     {
         var winner = leaverId == _first.Id ? _second : _first;
         Finish(winner.Id, aborted: true);
+    }
+
+    public void Forfeit(string playerId)
+    {
+        if (!Contains(playerId)) return;
+        Abort(playerId);
     }
 
     private async Task Loop(CancellationToken token)
@@ -137,8 +143,8 @@ public sealed class DuelRoom
 
     private void SpawnRound()
     {
-        _first.State.X = ArenaX - 9; _first.State.Z = ArenaZ; _first.State.DirX = 1; _first.State.DirZ = 0;
-        _second.State.X = ArenaX + 9; _second.State.Z = ArenaZ; _second.State.DirX = -1; _second.State.DirZ = 0;
+        _first.State.X = ArenaX - 20; _first.State.Z = ArenaZ; _first.State.DirX = 1; _first.State.DirZ = 0;
+        _second.State.X = ArenaX + 20; _second.State.Z = ArenaZ; _second.State.DirX = -1; _second.State.DirZ = 0;
         _first.State.Y = _second.State.Y = EyeHeight;
         _verticalVelocity[_first.Id] = _verticalVelocity[_second.Id] = 0;
         _health[_first.Id] = _health[_second.Id] = 100;
@@ -158,7 +164,7 @@ public sealed class DuelRoom
         if (Interlocked.Exchange(ref _hasFinished, 1) != 0) return;
         _cts.Cancel();
         var loser = winnerId == _first.Id ? _second : _first;
-        var transfer = aborted ? 0 : Math.Min(5, loser.State.Score);
+        var transfer = Math.Min(5, loser.State.Score);
         loser.State.Score -= transfer; (winnerId == _first.Id ? _first : _second).State.Score += transfer;
         Restore(_first); Restore(_second);
         _ = Task.WhenAll(

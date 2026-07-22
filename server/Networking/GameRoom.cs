@@ -294,6 +294,10 @@ public sealed class GameRoom
                     _duels.Shoot(connection.Id, dirX, dirZ);
                 }
             }
+            else if (message?.Type == "duelForfeit")
+            {
+                _duels.Forfeit(connection.Id);
+            }
         }
     }
 

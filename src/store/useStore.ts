@@ -64,6 +64,7 @@ interface MuseumState {
   playerName: string
   avatarId: string
   mouseSensitivity: number
+  graphicsQuality: 'low' | 'high'
   settingsOpen: boolean
   entranceDoorOpen: boolean
   score: number
@@ -80,7 +81,7 @@ interface MuseumState {
   outgoingPvp: { id: number; type: 'pvpRequest' | 'pvpResponse'; payload: Record<string, unknown> } | null
   duel: { id: string; opponent: string; players: Record<string, { x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
   duelReturnPose: PlayerPose | null
-  outgoingDuel: { id: number; type: 'duelInput' | 'duelShoot'; payload: Record<string, number> } | null
+  outgoingDuel: { id: number; type: 'duelInput' | 'duelShoot' | 'duelForfeit'; payload: Record<string, number> } | null
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
   beginJoining: () => void
@@ -103,6 +104,7 @@ interface MuseumState {
   setPlayerName: (name: string) => void
   setAvatarId: (avatarId: string) => void
   setMouseSensitivity: (sensitivity: number) => void
+  setGraphicsQuality: (quality: 'low' | 'high') => void
   setSettingsOpen: (open: boolean) => void
   setEntranceDoorOpen: (open: boolean) => void
   setScore: (score: number) => void
@@ -121,7 +123,8 @@ interface MuseumState {
   setDuelSnapshot: (players: NonNullable<MuseumState['duel']>['players']) => void
   endDuel: (returnPose?: PlayerPose) => void
   clearDuelReturnPose: () => void
-  sendDuel: (type: 'duelInput' | 'duelShoot', payload: Record<string, number>) => void
+  sendDuel: (type: 'duelInput' | 'duelShoot' | 'duelForfeit', payload?: Record<string, number>) => void
+  forfeitDuel: () => void
   upsertRemotePlayers: (players: RemotePlayer[]) => void
   replaceRemotePlayers: (players: RemotePlayer[]) => void
   removeRemotePlayer: (playerId: string) => void
@@ -149,6 +152,7 @@ export const useStore = create<MuseumState>((set) => ({
   playerName: '',
   avatarId: 'block-explorer',
   mouseSensitivity: 1,
+  graphicsQuality: 'high',
   settingsOpen: false,
   entranceDoorOpen: false,
   score: 0,
@@ -196,6 +200,7 @@ export const useStore = create<MuseumState>((set) => ({
   setPlayerName: (playerName) => set({ playerName }),
   setAvatarId: (avatarId) => set({ avatarId }),
   setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
+  setGraphicsQuality: (graphicsQuality) => set({ graphicsQuality }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
   setScore: (score) => set({ score }),
@@ -214,7 +219,8 @@ export const useStore = create<MuseumState>((set) => ({
   setDuelSnapshot: (players) => set((state) => state.duel ? { duel: { ...state.duel, players } } : state),
   endDuel: (duelReturnPose) => set({ duel: null, pvpInvite: null, duelReturnPose: duelReturnPose ?? null }),
   clearDuelReturnPose: () => set({ duelReturnPose: null }),
-  sendDuel: (type, payload) => set({ outgoingDuel: { id: nextOutgoingActionId(), type, payload } }),
+  sendDuel: (type, payload = {}) => set({ outgoingDuel: { id: nextOutgoingActionId(), type, payload } }),
+  forfeitDuel: () => set((state) => state.duel ? { outgoingDuel: { id: nextOutgoingActionId(), type: 'duelForfeit', payload: {} } } : state),
   upsertRemotePlayers: (players) => set((state) => {
     const remotePlayers = { ...state.remotePlayers }
     for (const player of players) {
