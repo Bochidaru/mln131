@@ -11,5 +11,6 @@ public class PlayerPoseMessage
     public string Area { get; set; } = "grounds";
     public string? FocusedPoster { get; set; }
     public bool Seated { get; set; }
+    public int Pose { get; set; }
     public long Timestamp { get; set; }
 }

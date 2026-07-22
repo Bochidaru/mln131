@@ -16,6 +16,7 @@ import { Minimap } from './Minimap'
 import { MobileControls } from './MobileControls'
 import { MuseumInterior } from './MuseumInterior'
 import { Player } from './Player'
+import { PoseIndicator } from './PoseIndicator'
 import { RemotePlayers } from './RemotePlayers'
 import { Surroundings } from './Surroundings'
 import { MultiplayerConnector } from '../network/MultiplayerConnector'
@@ -85,6 +86,7 @@ export function MuseumScene() {
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
     <AudioController />
     <HUD />
+    <PoseIndicator />
     <ChatPanel />
     <QuizPanel />
     <PvpPanel />

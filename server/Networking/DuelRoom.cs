@@ -168,6 +168,7 @@ public sealed class DuelRoom
                 _verticalVelocity[player.Id] = 0;
             }
             player.State.DirX = input.DirX; player.State.DirZ = input.DirZ; player.State.Area = "duel";
+            player.State.Pose = input.Pose;
         }
     }
 
@@ -191,8 +192,8 @@ public sealed class DuelRoom
     private async Task BroadcastAsync(CancellationToken token)
     {
         var payload = new { duelId = Id, duelPlayers = new[] {
-            new { playerId = _first.Id, x = _first.State.X, y = _first.State.Y, z = _first.State.Z, dirX = _first.State.DirX, dirZ = _first.State.DirZ, hp = _health[_first.Id], wins = _wins[_first.Id] },
-            new { playerId = _second.Id, x = _second.State.X, y = _second.State.Y, z = _second.State.Z, dirX = _second.State.DirX, dirZ = _second.State.DirZ, hp = _health[_second.Id], wins = _wins[_second.Id] },
+            new { playerId = _first.Id, avatarId = _first.State.AvatarId, pose = _first.State.Pose, x = _first.State.X, y = _first.State.Y, z = _first.State.Z, dirX = _first.State.DirX, dirZ = _first.State.DirZ, hp = _health[_first.Id], wins = _wins[_first.Id] },
+            new { playerId = _second.Id, avatarId = _second.State.AvatarId, pose = _second.State.Pose, x = _second.State.X, y = _second.State.Y, z = _second.State.Z, dirX = _second.State.DirX, dirZ = _second.State.DirZ, hp = _health[_second.Id], wins = _wins[_second.Id] },
         }};
         await Task.WhenAll(_first.SendAsync("duelSnapshot", payload, token), _second.SendAsync("duelSnapshot", payload, token));
     }
@@ -318,7 +319,7 @@ public sealed class DuelRoom
         player.State.X = saved.X; player.State.Y = saved.Y; player.State.Z = saved.Z; player.State.DirX = saved.DirX; player.State.DirZ = saved.DirZ; player.State.Area = saved.Area;
     }
 
-    public readonly record struct DuelInput(float MoveX, float MoveZ, float DirX, float DirZ, bool Sprinting, bool Jump);
+    public readonly record struct DuelInput(float MoveX, float MoveZ, float DirX, float DirZ, bool Sprinting, bool Jump, int Pose);
     private readonly record struct SavedPose(float X, float Y, float Z, float DirX, float DirZ, string Area)
     { public SavedPose(PlayerState state) : this(state.X, state.Y, state.Z, state.DirX, state.DirZ, state.Area) { } }
 }

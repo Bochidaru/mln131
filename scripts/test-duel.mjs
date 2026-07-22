@@ -107,6 +107,12 @@ try {
   const initial = await first.waitFor('duelSnapshot', (message) => message.payload?.duelPlayers?.some((player) => player.playerId === first.id))
   const initialPlayer = initial.payload.duelPlayers.find((player) => player.playerId === first.id)
   const initialTarget = initial.payload.duelPlayers.find((player) => player.playerId === second.id)
+  first.send('duelInput', { moveX: 0, moveZ: 0, dirX: 1, dirZ: 0, sprint: 0, jump: 0, pose: 1 })
+  const posed = await first.waitFor('duelSnapshot', (message) => {
+    const player = message.payload?.duelPlayers?.find((candidate) => candidate.playerId === first.id)
+    return player?.pose === 1
+  })
+  assert.equal(posed.payload.duelPlayers.find((player) => player.playerId === first.id).avatarId, 'block-explorer')
   first.send('duelInput', { moveX: 1, moveZ: 0, dirX: 1, dirZ: 0, sprint: 0, jump: 0 })
   const moved = await first.waitFor('duelSnapshot', (message) => {
     const player = message.payload?.duelPlayers?.find((candidate) => candidate.playerId === first.id)
@@ -177,6 +183,7 @@ try {
     fourth.waitFor('pvpInviteExpired', (message) => message.payload?.fromPlayerId === third.id, 12_000),
   ])
 
+  await new Promise((resolve) => setTimeout(resolve, 150))
   third.messages = []
   fourth.messages = []
   third.send('pvpRequest', { targetPlayerId: fourth.id })

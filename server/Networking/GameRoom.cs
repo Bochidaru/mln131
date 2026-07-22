@@ -192,6 +192,7 @@ public sealed class GameRoom
                 PlayerId = source.PlayerId,
                 Name = source.Name,
                 AvatarId = source.AvatarId,
+                Pose = source.Pose,
                 Score = source.Score,
                 X = source.X,
                 Y = source.Y,
@@ -311,9 +312,9 @@ public sealed class GameRoom
             }
             else if (message?.Type == "duelInput" && message.Payload is JsonElement inputPayload)
             {
-                if (TryReadDuelVector(inputPayload, out var moveX, out var moveZ, out var dirX, out var dirZ, out var sprinting, out var jump))
+                if (TryReadDuelVector(inputPayload, out var moveX, out var moveZ, out var dirX, out var dirZ, out var sprinting, out var jump, out var pose))
                 {
-                    _duels.Input(connection.Id, new DuelRoom.DuelInput(moveX, moveZ, dirX, dirZ, sprinting, jump));
+                    _duels.Input(connection.Id, new DuelRoom.DuelInput(moveX, moveZ, dirX, dirZ, sprinting, jump, pose));
                 }
             }
             else if (message?.Type == "duelShoot" && message.Payload is JsonElement shootPayload)
@@ -354,14 +355,16 @@ public sealed class GameRoom
         connection.State.Area = string.IsNullOrWhiteSpace(pose.Area) ? "grounds" : pose.Area;
         connection.State.FocusedPoster = pose.FocusedPoster;
         connection.State.Seated = pose.Seated;
+        connection.State.Pose = Math.Clamp(pose.Pose, 0, 2);
         connection.State.TickId = _tickCounter;
     }
 
-    private static bool TryReadDuelVector(JsonElement payload, out float moveX, out float moveZ, out float dirX, out float dirZ, out bool sprinting, out bool jump)
+    private static bool TryReadDuelVector(JsonElement payload, out float moveX, out float moveZ, out float dirX, out float dirZ, out bool sprinting, out bool jump, out int pose)
     {
-        moveX = moveZ = dirX = dirZ = 0; sprinting = jump = false;
+        moveX = moveZ = dirX = dirZ = 0; sprinting = jump = false; pose = 0;
         if (payload.TryGetProperty("sprint", out var sprintElement)) sprinting = sprintElement.ValueKind == JsonValueKind.True || sprintElement.TryGetInt32(out var sprintValue) && sprintValue != 0;
         if (payload.TryGetProperty("jump", out var jumpElement)) jump = jumpElement.ValueKind == JsonValueKind.True || jumpElement.TryGetInt32(out var jumpValue) && jumpValue != 0;
+        if (payload.TryGetProperty("pose", out var poseElement) && poseElement.TryGetInt32(out var poseValue)) pose = Math.Clamp(poseValue, 0, 2);
         return payload.TryGetProperty("moveX", out var moveXElement) && moveXElement.TryGetSingle(out moveX)
             && payload.TryGetProperty("moveZ", out var moveZElement) && moveZElement.TryGetSingle(out moveZ)
             && payload.TryGetProperty("dirX", out var dirXElement) && dirXElement.TryGetSingle(out dirX)

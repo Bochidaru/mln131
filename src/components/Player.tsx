@@ -70,6 +70,9 @@ export function Player() {
         jumping.current = true
         verticalVelocity.current = jumpSpeed
       }
+      if (!event.repeat && store.entered && !store.activePoster && !store.quizOpen && (event.code === 'Digit1' || event.code === 'Digit2' || event.code === 'Digit3')) {
+        store.setPlayerEmotePose(event.code === 'Digit1' ? 0 : event.code === 'Digit2' ? 1 : 2)
+      }
       keys.current.add(event.code)
     }
     const up = (event: KeyboardEvent) => keys.current.delete(event.code)
@@ -169,6 +172,7 @@ export function Player() {
           dirZ: forward.z,
           sprint: keys.current.has('ShiftLeft') || keys.current.has('ShiftRight') ? 1 : 0,
           jump: duelJumpQueued.current ? 1 : 0,
+          pose: store.playerEmotePose,
         })
         duelJumpQueued.current = false
         lastDuelInput.current = state.clock.elapsedTime

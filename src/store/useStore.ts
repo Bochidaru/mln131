@@ -21,6 +21,7 @@ export interface RemotePlayer {
   id: string
   name: string
   avatarId: string
+  pose: number
   score: number
   x: number
   y: number
@@ -95,6 +96,7 @@ interface MuseumState {
   multiplayerPlayerId: string | null
   playerName: string
   avatarId: string
+  playerEmotePose: number
   mouseSensitivity: number
   graphicsQuality: GraphicsQuality
   autoGraphicsQuality: ResolvedGraphicsQuality
@@ -114,7 +116,7 @@ interface MuseumState {
   pvpOutgoingInvite: { targetPlayerId: string; name: string; expiresAt: number } | null
   pvpCooldownUntil: number
   outgoingPvp: { id: number; type: 'pvpRequest' | 'pvpResponse'; payload: Record<string, unknown> } | null
-  duel: { id: string; opponent: string; players: Record<string, { x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
+  duel: { id: string; opponent: string; players: Record<string, { avatarId: string; pose: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
   duelReturnPose: PlayerPose | null
   duelShot: DuelShot | null
   duelFinished: DuelFinished | null
@@ -140,6 +142,7 @@ interface MuseumState {
   setMultiplayerPlayerId: (playerId: string | null) => void
   setPlayerName: (name: string) => void
   setAvatarId: (avatarId: string) => void
+  setPlayerEmotePose: (pose: number) => void
   setMouseSensitivity: (sensitivity: number) => void
   setGraphicsQuality: (quality: GraphicsQuality) => void
   setSettingsOpen: (open: boolean) => void
@@ -192,6 +195,7 @@ export const useStore = create<MuseumState>((set) => ({
   multiplayerPlayerId: null,
   playerName: '',
   avatarId: 'block-explorer',
+  playerEmotePose: 0,
   mouseSensitivity: 1,
   graphicsQuality: initialGraphicsQuality,
   autoGraphicsQuality,
@@ -245,6 +249,7 @@ export const useStore = create<MuseumState>((set) => ({
   setMultiplayerPlayerId: (multiplayerPlayerId) => set({ multiplayerPlayerId }),
   setPlayerName: (playerName) => set({ playerName }),
   setAvatarId: (avatarId) => set({ avatarId }),
+  setPlayerEmotePose: (playerEmotePose) => set({ playerEmotePose: Math.min(2, Math.max(0, playerEmotePose)) }),
   setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
   setGraphicsQuality: (graphicsQuality) => {
     window.localStorage.setItem('mln131-graphics-quality', graphicsQuality)

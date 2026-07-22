@@ -5,6 +5,7 @@ type ServerPlayer = {
   playerId: string
   name?: string
   avatarId?: string
+  pose?: number
   score?: number
   x: number
   y?: number
@@ -51,7 +52,7 @@ type ServerMessage = {
     aborted?: boolean
     returnsAt?: string
     returnPose?: { x: number; z: number; dirX: number; dirZ: number }
-    duelPlayers?: { playerId: string; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
+    duelPlayers?: { playerId: string; avatarId?: string; pose?: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
     shotId?: string
     shooterId?: string
     startX?: number
@@ -87,6 +88,7 @@ function toRemotePlayer(player: ServerPlayer): RemotePlayer {
     id: player.playerId,
     name: player.name?.trim() || 'Khách tham quan',
     avatarId: player.avatarId ?? 'block-explorer',
+    pose: player.pose ?? 0,
     score: player.score ?? 0,
     x: player.x,
     y: player.y ?? 1.68,
@@ -146,6 +148,7 @@ export function MultiplayerConnector() {
           area: state.currentArea,
           focusedPoster: state.focusedPoster,
           seated: Boolean(state.seated),
+          pose: state.playerEmotePose,
           timestamp: Date.now(),
         },
       }))
@@ -275,7 +278,7 @@ export function MultiplayerConnector() {
         if (message.payload?.targetPlayerId && store.pvpOutgoingInvite?.targetPlayerId === message.payload.targetPlayerId) store.setPvpOutgoingInvite(null)
       }
       if (message.type === 'duelStart' && message.payload?.duelId && message.payload.opponent) store.startDuel(message.payload.duelId, message.payload.opponent)
-      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, player])))
+      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, { ...player, avatarId: player.avatarId ?? 'block-explorer', pose: player.pose ?? 0 }])))
       if (message.type === 'duelShot' && message.payload?.shotId && message.payload.shooterId
         && message.payload.startX !== undefined && message.payload.startY !== undefined && message.payload.startZ !== undefined
         && message.payload.endX !== undefined && message.payload.endY !== undefined && message.payload.endZ !== undefined) {
