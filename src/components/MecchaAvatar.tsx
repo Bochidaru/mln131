@@ -1,6 +1,6 @@
 import { useGLTF } from '@react-three/drei'
 import { useEffect, useMemo } from 'react'
-import { Color, Mesh, type Material, type Object3D } from 'three'
+import { Box3, Color, Mesh, Vector3, type Material, type Object3D } from 'three'
 import { getAvatar } from '../data/avatars'
 
 const modelUrls = [
@@ -8,6 +8,8 @@ const modelUrls = [
   '/models/meccha-chameleon-pose-1.glb',
   '/models/meccha-chameleon-pose-2.glb',
 ] as const
+
+const poseHeights = [1.72, 1.72, 1.4] as const
 
 function cloneMaterial(material: Material, color: string) {
   const cloned = material.clone() as Material & { color?: Color }
@@ -40,7 +42,7 @@ export function MecchaAvatar({ avatarId, pose = 0 }: { avatarId: string; pose?: 
   const avatar = getAvatar(avatarId)
   const normalizedPose = Math.min(2, Math.max(0, Math.trunc(pose)))
   const { scene } = useGLTF(modelUrls[normalizedPose])
-  const model = useMemo(() => {
+  const prepared = useMemo(() => {
     const clone = scene.clone(true)
     clone.traverse((node) => {
       if (!(node instanceof Mesh)) return
@@ -51,14 +53,24 @@ export function MecchaAvatar({ avatarId, pose = 0 }: { avatarId: string; pose?: 
         ? node.material.map((material) => cloneMaterial(material, avatar.suit))
         : cloneMaterial(node.material, avatar.suit)
     })
-    return clone
-  }, [avatar.suit, scene])
+    clone.updateMatrixWorld(true)
+    const bounds = new Box3().setFromObject(clone)
+    const center = bounds.getCenter(new Vector3())
+    const sourceHeight = Math.max(0.001, bounds.max.y - bounds.min.y)
+    const scale = poseHeights[normalizedPose] / sourceHeight
+    const position: [number, number, number] = [
+      -center.x * scale,
+      -bounds.min.y * scale,
+      -center.z * scale,
+    ]
+    return { model: clone, position, scale }
+  }, [avatar.suit, normalizedPose, scene])
 
-  useEffect(() => () => disposeClone(model), [model])
+  useEffect(() => () => disposeClone(prepared.model), [prepared])
 
   return <group>
-    <group rotation={[-Math.PI / 2, 0, 0]} scale={0.021}>
-      <primitive object={model} />
+    <group position={prepared.position} scale={prepared.scale}>
+      <primitive object={prepared.model} />
     </group>
     <AvatarAccessory avatarId={avatar.id} color={avatar.accent} />
   </group>
