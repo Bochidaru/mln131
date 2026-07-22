@@ -1,4 +1,5 @@
 import { useGLTF } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo } from 'react'
 import { Box3, Color, Mesh, Vector3, type Material, type Object3D } from 'three'
 import { getAvatar } from '../data/avatars'
@@ -14,6 +15,8 @@ const modelUrls = [
 // All source poses use the same character scale; crouched poses stay naturally shorter.
 const poseHeights = [1.72, 1.72, 1.4, 1.72, 1] as const
 
+type ColorMaterial = Material & { color?: Color }
+
 function cloneMaterial(material: Material, color: string) {
   const cloned = material.clone() as Material & { color?: Color }
   if (cloned.color) cloned.color.set(color)
@@ -28,20 +31,26 @@ function disposeClone(object: Object3D) {
   })
 }
 
-export function MecchaAvatar({ avatarId, pose = 0 }: { avatarId: string; pose?: number }) {
+export function MecchaAvatar({ avatarId, guide = false, pose = 0 }: { avatarId: string; guide?: boolean; pose?: number }) {
   const avatar = getAvatar(avatarId)
   const normalizedPose = Math.min(4, Math.max(0, Math.trunc(pose)))
   const { scene } = useGLTF(modelUrls[normalizedPose])
   const prepared = useMemo(() => {
     const clone = scene.clone(true)
+    const rainbowMaterials: ColorMaterial[] = []
     clone.traverse((node) => {
       if (!(node instanceof Mesh)) return
       // The source meshes are dense; avoiding per-avatar shadow maps keeps multiplayer responsive.
       node.castShadow = false
       node.receiveShadow = false
+      const cloneOne = (material: Material) => {
+        const cloned = cloneMaterial(material, avatar.suit)
+        if (guide && cloned.color) rainbowMaterials.push(cloned)
+        return cloned
+      }
       node.material = Array.isArray(node.material)
-        ? node.material.map((material) => cloneMaterial(material, avatar.suit))
-        : cloneMaterial(node.material, avatar.suit)
+        ? node.material.map(cloneOne)
+        : cloneOne(node.material)
     })
     clone.updateMatrixWorld(true)
     const bounds = new Box3().setFromObject(clone)
@@ -53,10 +62,15 @@ export function MecchaAvatar({ avatarId, pose = 0 }: { avatarId: string; pose?: 
       -bounds.min.y * scale,
       -center.z * scale,
     ]
-    return { model: clone, position, scale }
-  }, [avatar.suit, normalizedPose, scene])
+    return { model: clone, position, scale, rainbowMaterials }
+  }, [avatar.suit, guide, normalizedPose, scene])
 
   useEffect(() => () => disposeClone(prepared.model), [prepared])
+  useFrame(({ clock }) => {
+    if (!guide) return
+    const hue = (clock.elapsedTime * 0.17) % 1
+    prepared.rainbowMaterials.forEach((material, index) => material.color?.setHSL((hue + index * 0.08) % 1, 0.9, 0.58))
+  })
 
   return <group position={prepared.position} scale={prepared.scale}>
     <primitive object={prepared.model} />

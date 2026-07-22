@@ -1,6 +1,6 @@
 import type { RemotePlayer } from '../store/useStore'
 
-export const PVP_INTERACTION_RANGE = 1.25
+export const PVP_INTERACTION_RANGE = 2
 const TARGET_HALF_WIDTH = 0.36
 const TARGET_HEIGHT = 1.8
 const EPSILON = 0.0001

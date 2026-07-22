@@ -9,6 +9,7 @@ const previewOffsets = [0, 0, 0.16, 0, 0.36]
 export function PoseIndicator() {
   const entered = useStore((state) => state.entered)
   const avatarId = useStore((state) => state.avatarId)
+  const isGuide = useStore((state) => state.isGuide)
   const pose = useStore((state) => state.playerEmotePose)
   const activePose = Math.min(4, Math.max(0, pose))
 
@@ -19,7 +20,7 @@ export function PoseIndicator() {
         <ambientLight intensity={1.6} />
         <directionalLight position={[3, 5, 4]} intensity={2.2} color="#ffe4b6" />
         <group position={[0, previewOffsets[activePose], 0]} rotation={[0, -0.52, 0]}>
-          <Suspense fallback={null}><MecchaAvatar avatarId={avatarId} pose={activePose} /></Suspense>
+          <Suspense fallback={null}><MecchaAvatar avatarId={avatarId} guide={isGuide} pose={activePose} /></Suspense>
         </group>
       </Canvas>
     </div>

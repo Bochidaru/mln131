@@ -41,6 +41,15 @@ public sealed class ConnectionManager
         return false;
     }
 
+    public async Task<bool> SetGuideAsync(string playerId, bool isGuide, CancellationToken cancellationToken)
+    {
+        foreach (var room in _rooms.Values)
+        {
+            if (await room.SetGuideAsync(playerId, isGuide, cancellationToken)) return true;
+        }
+        return false;
+    }
+
 
     public async Task HandleAsync(WebSocket socket, CancellationToken cancellationToken)
     {

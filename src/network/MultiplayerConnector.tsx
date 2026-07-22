@@ -5,6 +5,7 @@ type ServerPlayer = {
   playerId: string
   name?: string
   avatarId?: string
+  isGuide?: boolean
   pose?: number
   score?: number
   x: number
@@ -28,6 +29,7 @@ type ServerMessage = {
     roomId?: string
     tickRate?: number
     online?: number
+    isGuide?: boolean
     players?: ServerPlayer[]
     player?: ServerPlayer
     reason?: string
@@ -52,7 +54,7 @@ type ServerMessage = {
     aborted?: boolean
     returnsAt?: string
     returnPose?: { x: number; z: number; dirX: number; dirZ: number }
-    duelPlayers?: { playerId: string; avatarId?: string; pose?: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
+    duelPlayers?: { playerId: string; avatarId?: string; isGuide?: boolean; pose?: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
     shotId?: string
     shooterId?: string
     startX?: number
@@ -88,6 +90,7 @@ function toRemotePlayer(player: ServerPlayer): RemotePlayer {
     id: player.playerId,
     name: player.name?.trim() || 'Khách tham quan',
     avatarId: player.avatarId ?? 'block-explorer',
+    isGuide: Boolean(player.isGuide),
     pose: player.pose ?? 0,
     score: player.score ?? 0,
     x: player.x,
@@ -116,6 +119,7 @@ export function MultiplayerConnector() {
 
     let disposed = false
     let rejected = false
+    let kicked = false
 
     const clearTimers = () => {
       if (reconnectRef.current !== null) window.clearTimeout(reconnectRef.current)
@@ -203,6 +207,7 @@ export function MultiplayerConnector() {
         store.setMultiplayerPlayerId(message.playerId ?? null)
         store.setMultiplayerConnected(true)
         store.setScore(message.payload?.score ?? 0)
+        store.setIsGuide(Boolean(message.payload?.isGuide))
         if (message.payload?.players) store.upsertRemotePlayers(message.payload.players.map(toRemotePlayer))
         store.enter()
         if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
@@ -212,6 +217,8 @@ export function MultiplayerConnector() {
       }
 
       if (message.type === 'snapshot' && message.players) {
+        const self = message.players.find((player) => player.playerId === store.multiplayerPlayerId)
+        if (self) store.setIsGuide(Boolean(self.isGuide))
         store.replaceRemotePlayers(message.players.map(toRemotePlayer))
         store.setEntranceDoorOpen(Boolean(message.doorOpen))
         return
@@ -224,13 +231,27 @@ export function MultiplayerConnector() {
         return
       }
 
+      if (message.type === 'kicked') {
+        kicked = true
+        clearTimers()
+        store.leaveMuseum(message.payload?.reason ?? 'Bạn đã bị admin đưa ra khỏi bảo tàng.')
+        socketRef.current?.close()
+        return
+      }
+
+      if (message.type === 'guideStatus') {
+        store.setIsGuide(Boolean(message.payload?.isGuide))
+        return
+      }
+
       if (message.type === 'playerJoined' && message.payload?.player) {
         store.upsertRemotePlayers([toRemotePlayer(message.payload.player)])
         return
       }
 
       if (message.type === 'playerUpdated' && message.payload?.player) {
-        store.upsertRemotePlayers([toRemotePlayer(message.payload.player)])
+        if (message.payload.player.playerId === store.multiplayerPlayerId) store.setIsGuide(Boolean(message.payload.player.isGuide))
+        else store.upsertRemotePlayers([toRemotePlayer(message.payload.player)])
         return
       }
 
@@ -278,7 +299,7 @@ export function MultiplayerConnector() {
         if (message.payload?.targetPlayerId && store.pvpOutgoingInvite?.targetPlayerId === message.payload.targetPlayerId) store.setPvpOutgoingInvite(null)
       }
       if (message.type === 'duelStart' && message.payload?.duelId && message.payload.opponent) store.startDuel(message.payload.duelId, message.payload.opponent)
-      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, { ...player, avatarId: player.avatarId ?? 'block-explorer', pose: player.pose ?? 0 }])))
+      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, { ...player, avatarId: player.avatarId ?? 'block-explorer', isGuide: Boolean(player.isGuide), pose: player.pose ?? 0 }])))
       if (message.type === 'duelShot' && message.payload?.shotId && message.payload.shooterId
         && message.payload.startX !== undefined && message.payload.startY !== undefined && message.payload.startZ !== undefined
         && message.payload.endX !== undefined && message.payload.endY !== undefined && message.payload.endZ !== undefined) {
@@ -333,7 +354,7 @@ export function MultiplayerConnector() {
         if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
         sendTimerRef.current = null
         useStore.getState().setMultiplayerConnected(false)
-        if (!rejected) scheduleReconnect()
+        if (!rejected && !kicked) scheduleReconnect()
       })
 
       socket.addEventListener('error', () => {

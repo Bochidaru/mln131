@@ -6,6 +6,8 @@ import { useStore, type RemotePlayer } from '../store/useStore'
 import { getAvatar } from '../data/avatars'
 import { MecchaAvatar } from './MecchaAvatar'
 
+const rainbow = new Color()
+
 function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
   const group = useRef<Group>(null)
   const targetPosition = useRef(new Vector3(player.x, 0, player.z))
@@ -33,7 +35,7 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
   })
 
   return <group ref={group}>
-    <Suspense fallback={null}><MecchaAvatar avatarId={player.avatarId} pose={player.pose} /></Suspense>
+    <Suspense fallback={null}><MecchaAvatar avatarId={player.avatarId} guide={player.isGuide} pose={player.pose} /></Suspense>
     <Text position={[0, 2.05, 0]} fontSize={0.16} color="#f2eadc" anchorX="center" anchorY="middle">
       {player.name}
     </Text>
@@ -77,6 +79,18 @@ function RemoteCrowd({ players }: { players: RemotePlayer[] }) {
     if (bodies.current.instanceColor) bodies.current.instanceColor.needsUpdate = true
     if (heads.current.instanceColor) heads.current.instanceColor.needsUpdate = true
   }, [players])
+
+  useFrame(({ clock }) => {
+    if (!bodies.current || !heads.current || !players.some((player) => player.isGuide)) return
+    players.forEach((player, index) => {
+      if (!player.isGuide) return
+      rainbow.setHSL((clock.elapsedTime * 0.17 + index * 0.08) % 1, 0.9, 0.58)
+      bodies.current!.setColorAt(index, rainbow)
+      heads.current!.setColorAt(index, rainbow)
+    })
+    if (bodies.current.instanceColor) bodies.current.instanceColor.needsUpdate = true
+    if (heads.current.instanceColor) heads.current.instanceColor.needsUpdate = true
+  })
 
   if (!players.length) return null
   return <group>

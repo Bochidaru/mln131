@@ -29,7 +29,7 @@ public sealed class GameRoom
 
     public int PlayerCount => _players.Count;
     public IReadOnlyList<PlayerAdminSnapshot> GetAdminPlayers() => _players.Values
-        .Select(player => new PlayerAdminSnapshot(player.Id, player.State.Name, player.State.AvatarId, player.State.Score, player.State.Area, _duels.IsInDuel(player.Id)))
+        .Select(player => new PlayerAdminSnapshot(player.Id, player.State.Name, player.State.AvatarId, player.State.Score, player.State.Area, _duels.IsInDuel(player.Id), player.State.IsGuide))
         .OrderByDescending(player => player.Score)
         .ThenBy(player => player.Name, StringComparer.OrdinalIgnoreCase)
         .ToArray();
@@ -92,6 +92,7 @@ public sealed class GameRoom
             tickRate = _tickRate,
             online = PlayerCount,
             score = playerConnection.State.Score,
+            isGuide = playerConnection.State.IsGuide,
             players = CreateSnapshot().Players
         }), cancellationToken);
 
@@ -133,6 +134,16 @@ public sealed class GameRoom
         if (!_players.TryGetValue(playerId, out var player)) return false;
 
         var name = player.State.Name;
+        try
+        {
+            await SendAsync(player, new ServerMessage("kicked", Payload: new
+            {
+                reason = "Bạn đã bị admin đưa ra khỏi bảo tàng."
+            }), cancellationToken);
+        }
+        catch (WebSocketException) { }
+        catch (OperationCanceledException) { }
+
         RemovePlayer(player);
         await BroadcastMessageAsync(new ServerMessage("chat", "system", new
         {
@@ -150,6 +161,16 @@ public sealed class GameRoom
         catch (WebSocketException) { }
         catch (OperationCanceledException) { }
 
+        return true;
+    }
+
+    public async Task<bool> SetGuideAsync(string playerId, bool isGuide, CancellationToken cancellationToken)
+    {
+        if (!_players.TryGetValue(playerId, out var player)) return false;
+
+        player.State.IsGuide = isGuide;
+        await player.SendAsync("guideStatus", new { isGuide }, cancellationToken);
+        await BroadcastMessageAsync(new ServerMessage("playerUpdated", player.Id, new { player = player.State }), player.Id, cancellationToken);
         return true;
     }
 
@@ -192,6 +213,7 @@ public sealed class GameRoom
                 PlayerId = source.PlayerId,
                 Name = source.Name,
                 AvatarId = source.AvatarId,
+                IsGuide = source.IsGuide,
                 Pose = source.Pose,
                 Score = source.Score,
                 X = source.X,
@@ -439,4 +461,4 @@ public sealed class GameRoom
 
 }
 
-public sealed record PlayerAdminSnapshot(string Id, string Name, string AvatarId, int Score, string Area, bool InDuel);
+public sealed record PlayerAdminSnapshot(string Id, string Name, string AvatarId, int Score, string Area, bool InDuel, bool IsGuide);

@@ -66,6 +66,12 @@ app.MapPost("/admin/api/players/{playerId}/kick", async (string playerId, HttpCo
     return await connections.KickPlayerAsync(playerId, context.RequestAborted) ? Results.NoContent() : Results.NotFound();
 });
 
+app.MapPost("/admin/api/players/{playerId}/guide", async (string playerId, bool enabled, HttpContext context, IOptions<AdminOptions> options, ConnectionManager connections) =>
+{
+    if (!AdminAuthentication.IsAuthorized(context, options)) return Results.Unauthorized();
+    return await connections.SetGuideAsync(playerId, enabled, context.RequestAborted) ? Results.NoContent() : Results.NotFound();
+});
+
 app.Map("/ws", async (HttpContext context, ConnectionManager connections) =>
 {
     if (!context.WebSockets.IsWebSocketRequest)

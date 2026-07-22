@@ -6,6 +6,7 @@ public class PlayerState
     public string PlayerId { get; set; } = string.Empty;
     public string Name { get; set; } = "Khách tham quan";
     public string AvatarId { get; set; } = "block-explorer";
+    public bool IsGuide { get; set; }
     public int Pose { get; set; }
     public int Score { get; set; }
     public float X { get; set; }

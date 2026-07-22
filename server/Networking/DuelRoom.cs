@@ -192,8 +192,8 @@ public sealed class DuelRoom
     private async Task BroadcastAsync(CancellationToken token)
     {
         var payload = new { duelId = Id, duelPlayers = new[] {
-            new { playerId = _first.Id, avatarId = _first.State.AvatarId, pose = _first.State.Pose, x = _first.State.X, y = _first.State.Y, z = _first.State.Z, dirX = _first.State.DirX, dirZ = _first.State.DirZ, hp = _health[_first.Id], wins = _wins[_first.Id] },
-            new { playerId = _second.Id, avatarId = _second.State.AvatarId, pose = _second.State.Pose, x = _second.State.X, y = _second.State.Y, z = _second.State.Z, dirX = _second.State.DirX, dirZ = _second.State.DirZ, hp = _health[_second.Id], wins = _wins[_second.Id] },
+            new { playerId = _first.Id, avatarId = _first.State.AvatarId, isGuide = _first.State.IsGuide, pose = _first.State.Pose, x = _first.State.X, y = _first.State.Y, z = _first.State.Z, dirX = _first.State.DirX, dirZ = _first.State.DirZ, hp = _health[_first.Id], wins = _wins[_first.Id] },
+            new { playerId = _second.Id, avatarId = _second.State.AvatarId, isGuide = _second.State.IsGuide, pose = _second.State.Pose, x = _second.State.X, y = _second.State.Y, z = _second.State.Z, dirX = _second.State.DirX, dirZ = _second.State.DirZ, hp = _health[_second.Id], wins = _wins[_second.Id] },
         }};
         await Task.WhenAll(_first.SendAsync("duelSnapshot", payload, token), _second.SendAsync("duelSnapshot", payload, token));
     }

@@ -22,6 +22,7 @@ export interface RemotePlayer {
   id: string
   name: string
   avatarId: string
+  isGuide: boolean
   pose: number
   score: number
   x: number
@@ -97,6 +98,7 @@ interface MuseumState {
   multiplayerPlayerId: string | null
   playerName: string
   avatarId: string
+  isGuide: boolean
   playerEmotePose: number
   mouseSensitivity: number
   graphicsQuality: GraphicsQuality
@@ -117,7 +119,7 @@ interface MuseumState {
   pvpOutgoingInvite: { targetPlayerId: string; name: string; expiresAt: number } | null
   pvpCooldownUntil: number
   outgoingPvp: { id: number; type: 'pvpRequest' | 'pvpResponse'; payload: Record<string, unknown> } | null
-  duel: { id: string; opponent: string; players: Record<string, { avatarId: string; pose: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
+  duel: { id: string; opponent: string; players: Record<string, { avatarId: string; isGuide: boolean; pose: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
   duelReturnPose: PlayerPose | null
   duelShot: DuelShot | null
   duelFinished: DuelFinished | null
@@ -143,6 +145,8 @@ interface MuseumState {
   setMultiplayerPlayerId: (playerId: string | null) => void
   setPlayerName: (name: string) => void
   setAvatarId: (avatarId: string) => void
+  setIsGuide: (isGuide: boolean) => void
+  leaveMuseum: (reason: string) => void
   setPlayerEmotePose: (pose: number) => void
   setMouseSensitivity: (sensitivity: number) => void
   setGraphicsQuality: (quality: GraphicsQuality) => void
@@ -196,6 +200,7 @@ export const useStore = create<MuseumState>((set) => ({
   multiplayerPlayerId: null,
   playerName: '',
   avatarId: 'block-explorer',
+  isGuide: false,
   playerEmotePose: 0,
   mouseSensitivity: 1,
   graphicsQuality: initialGraphicsQuality,
@@ -250,6 +255,28 @@ export const useStore = create<MuseumState>((set) => ({
   setMultiplayerPlayerId: (multiplayerPlayerId) => set({ multiplayerPlayerId }),
   setPlayerName: (playerName) => set({ playerName }),
   setAvatarId: (avatarId) => set({ avatarId }),
+  setIsGuide: (isGuide) => set({ isGuide }),
+  leaveMuseum: (joinError) => set({
+    entered: false,
+    joining: false,
+    joinError,
+    isGuide: false,
+    multiplayerConnected: false,
+    multiplayerPlayerId: null,
+    remotePlayers: {},
+    activePoster: null,
+    focusedPoster: null,
+    focusedSeat: null,
+    seated: null,
+    quizOpen: false,
+    quizResult: null,
+    chatOpen: false,
+    pvpInvite: null,
+    pvpOutgoingInvite: null,
+    duel: null,
+    duelFinished: null,
+    settingsOpen: false,
+  }),
   setPlayerEmotePose: (playerEmotePose) => set({ playerEmotePose: Math.min(4, Math.max(0, playerEmotePose)) }),
   setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
   setGraphicsQuality: (graphicsQuality) => {

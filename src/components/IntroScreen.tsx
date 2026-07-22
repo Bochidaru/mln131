@@ -38,6 +38,7 @@ export function IntroScreen() {
       <h1>{uiText.title.split('\n').map((line) => <span key={line}>{line}</span>)}</h1>
       {step === 'welcome' ? <>
         <p className="intro-subtitle">Hành trình Chủ nghĩa xã hội khoa học</p>
+        {joinError && <p className="name-error">{joinError}</p>}
         <p className="intro-deck">{uiText.intro}</p>
         <div className="intro-actions">
           <button className="primary-button" type="button" onClick={() => setStep('profile')}>

@@ -4,7 +4,7 @@ namespace server.Networking;
 
 public sealed class DuelManager
 {
-    private const float InteractionRange = 1.25f;
+    private const float InteractionRange = 2f;
     private static readonly TimeSpan InviteDuration = TimeSpan.FromSeconds(10);
     private const int MinimumScoreToDuel = 5;
     private readonly ConcurrentDictionary<string, DuelRoom> _duels = new();
