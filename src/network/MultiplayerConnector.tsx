@@ -244,6 +244,11 @@ export function MultiplayerConnector() {
         return
       }
 
+      if (message.type === 'adminAward' && message.payload?.score !== undefined) {
+        store.setScore(message.payload.score)
+        return
+      }
+
       if (message.type === 'playerJoined' && message.payload?.player) {
         store.upsertRemotePlayers([toRemotePlayer(message.payload.player)])
         return

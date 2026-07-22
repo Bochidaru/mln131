@@ -174,6 +174,31 @@ public sealed class GameRoom
         return true;
     }
 
+    public async Task<bool> AwardPointsAsync(string playerId, int amount, CancellationToken cancellationToken)
+    {
+        if (amount <= 0 || !_players.TryGetValue(playerId, out var player)) return false;
+
+        int awarded;
+        lock (_playerGate)
+        {
+            var nextScore = Math.Min(int.MaxValue, (long)player.State.Score + amount);
+            awarded = (int)(nextScore - player.State.Score);
+            player.State.Score = (int)nextScore;
+        }
+        if (awarded <= 0) return false;
+
+        await Task.WhenAll(
+            SendAsync(player, new ServerMessage("adminAward", "system", new { amount = awarded, score = player.State.Score }), cancellationToken),
+            BroadcastMessageAsync(new ServerMessage("playerUpdated", player.Id, new { player = player.State }), player.Id, cancellationToken),
+            BroadcastMessageAsync(new ServerMessage("chat", "system", new
+            {
+                name = "Hệ thống",
+                text = $"Admin đã tặng {awarded} điểm cho người chơi {player.State.Name}"
+            }), exceptPlayerId: null, cancellationToken));
+
+        return true;
+    }
+
     public void Start()
     {
         _tickTask = Task.Run(() => TickLoopAsync(_cts.Token));

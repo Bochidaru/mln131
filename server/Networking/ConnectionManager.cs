@@ -50,6 +50,15 @@ public sealed class ConnectionManager
         return false;
     }
 
+    public async Task<bool> AwardPointsAsync(string playerId, int amount, CancellationToken cancellationToken)
+    {
+        foreach (var room in _rooms.Values)
+        {
+            if (await room.AwardPointsAsync(playerId, amount, cancellationToken)) return true;
+        }
+        return false;
+    }
+
 
     public async Task HandleAsync(WebSocket socket, CancellationToken cancellationToken)
     {
