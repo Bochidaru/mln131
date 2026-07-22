@@ -11,6 +11,10 @@ public sealed class DuelManager
     private readonly ConcurrentDictionary<string, DateTimeOffset> _requestCooldowns = new();
 
     public bool IsInDuel(string playerId) => _playerDuels.ContainsKey(playerId);
+    public IReadOnlyList<DuelAdminSnapshot> GetAdminDuels() => _duels.Values
+        .Select(duel => duel.GetAdminSnapshot())
+        .OrderBy(duel => duel.Id)
+        .ToArray();
 
     public void Request(ClientConnection requester, ClientConnection target)
     {
@@ -127,3 +131,6 @@ public sealed class DuelManager
 
     private sealed record DuelInvite(string Id, ClientConnection Requester, ClientConnection Target, DateTimeOffset ExpiresAt);
 }
+
+public sealed record DuelPlayerAdminSnapshot(string Id, string Name, int Score, int Wins);
+public sealed record DuelAdminSnapshot(string Id, DuelPlayerAdminSnapshot First, DuelPlayerAdminSnapshot Second, bool Finishing);

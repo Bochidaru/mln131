@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict'
 
 const url = process.env.DUEL_TEST_URL ?? 'ws://127.0.0.1:5266/ws'
+const adminUrl = process.env.ADMIN_TEST_URL ?? url.replace(/^ws/, 'http').replace(/\/ws$/, '')
+const adminAuthorization = `Basic ${Buffer.from('admin:admin').toString('base64')}`
+
+async function adminRequest(path, options = {}) {
+  return fetch(`${adminUrl}${path}`, {
+    ...options,
+    headers: { Authorization: adminAuthorization, ...options.headers },
+  })
+}
 
 class TestClient {
   constructor(name) {
@@ -152,7 +161,27 @@ try {
     fourth.waitFor('pvpInviteExpired', (message) => message.payload?.fromPlayerId === third.id, 12_000),
   ])
 
-  console.log('Duel smoke test passed: invite cooldown/expiry, movement, jump, server hit, shared result screen, delayed return pose.')
+  third.messages = []
+  fourth.messages = []
+  third.send('pvpRequest', { targetPlayerId: fourth.id })
+  await fourth.waitFor('pvpInvite', (message) => message.payload?.fromPlayerId === third.id)
+  fourth.send('pvpResponse', { fromPlayerId: third.id, accepted: true })
+  await Promise.all([third.waitFor('duelStart'), fourth.waitFor('duelStart')])
+
+  const adminStatus = await adminRequest('/admin/api/status')
+  assert.equal(adminStatus.status, 200)
+  const status = await adminStatus.json()
+  assert.ok(status.duels.some((duel) => duel.first.id === third.id || duel.second.id === third.id), 'Dashboard must list active duels')
+
+  const systemChat = first.waitFor('chat', (message) => message.playerId === 'system' && message.payload?.text?.includes(third.name) === false && message.payload?.text?.includes(fourth.name))
+  const kick = await adminRequest(`/admin/api/players/${fourth.id}/kick`, { method: 'POST' })
+  assert.equal(kick.status, 204)
+  await systemChat
+  const adminDuelResult = await third.waitFor('duelFinished', (message) => message.payload?.winnerId === third.id, 5_000)
+  assert.equal(adminDuelResult.payload.winnerWins, 3, 'Kicking a duel player must award the opponent the match')
+  await third.waitFor('duelResult', () => true, 5_000)
+
+  console.log('Duel smoke test passed: invite cooldown/expiry, movement, jump, shared result screen, and admin kick adjudication.')
 } finally {
   first.close()
   second.close()

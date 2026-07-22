@@ -46,6 +46,11 @@ public sealed class DuelRoom
     public string Id { get; } = Guid.NewGuid().ToString("N");
     public IEnumerable<string> PlayerIds => [_first.Id, _second.Id];
     public bool Contains(string playerId) => _first.Id == playerId || _second.Id == playerId;
+    public DuelAdminSnapshot GetAdminSnapshot() => new(
+        Id,
+        new DuelPlayerAdminSnapshot(_first.Id, _first.State.Name, _first.State.Score, _wins[_first.Id]),
+        new DuelPlayerAdminSnapshot(_second.Id, _second.State.Name, _second.State.Score, _wins[_second.Id]),
+        Volatile.Read(ref _hasFinished) != 0);
 
     public DuelRoom(ClientConnection first, ClientConnection second, Action<DuelRoom> finished)
     {

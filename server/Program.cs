@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Options;
+using server.Admin;
 using server.Networking;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<GameRoomFactory>();
 builder.Services.AddSingleton<ConnectionManager>();
 builder.Services.AddSingleton<DuelManager>();
+builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Admin"));
+builder.Services.AddSingleton<ServerMetrics>();
 
 builder.Services.AddCors(options =>
 {
@@ -41,6 +45,24 @@ app.MapGet("/health", (ConnectionManager connections) => Results.Ok(new
     status = "ok",
     online = connections.OnlineCount,
 }));
+
+app.MapGet("/admin", (HttpContext context, IOptions<AdminOptions> options) =>
+    AdminAuthentication.IsAuthorized(context, options)
+        ? Results.Content(AdminDashboardPage.Html, "text/html; charset=utf-8")
+        : Results.Unauthorized());
+
+app.MapGet("/admin/api/status", (HttpContext context, IOptions<AdminOptions> options, ConnectionManager connections, ServerMetrics metrics) =>
+{
+    if (!AdminAuthentication.IsAuthorized(context, options)) return Results.Unauthorized();
+    var status = connections.GetAdminStatus();
+    return Results.Ok(new { status.OnlineCount, status.Players, status.Duels, Metrics = metrics.GetSnapshot() });
+});
+
+app.MapPost("/admin/api/players/{playerId}/kick", async (string playerId, HttpContext context, IOptions<AdminOptions> options, ConnectionManager connections) =>
+{
+    if (!AdminAuthentication.IsAuthorized(context, options)) return Results.Unauthorized();
+    return await connections.KickPlayerAsync(playerId, context.RequestAborted) ? Results.NoContent() : Results.NotFound();
+});
 
 app.Map("/ws", async (HttpContext context, ConnectionManager connections) =>
 {

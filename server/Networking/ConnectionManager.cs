@@ -16,13 +16,29 @@ public sealed class ConnectionManager
 
     public int OnlineCount => _rooms.Values.Sum(room => room.PlayerCount);
     public const int tickRate = 32;
+    private readonly DuelManager _duels;
 
-    public ConnectionManager(ILogger<ConnectionManager> logger, GameRoomFactory factory)
+    public ConnectionManager(ILogger<ConnectionManager> logger, GameRoomFactory factory, DuelManager duels)
     {
         _logger = logger;
+        _duels = duels;
         var defaultRoom = factory.Create("Room-1", tickRate);
         _rooms[defaultRoom.Id] = defaultRoom;
         defaultRoom.Start();
+    }
+
+    public AdminStatusSnapshot GetAdminStatus() => new(
+        OnlineCount,
+        _rooms.Values.SelectMany(room => room.GetAdminPlayers()).OrderByDescending(player => player.Score).ThenBy(player => player.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
+        _duels.GetAdminDuels());
+
+    public async Task<bool> KickPlayerAsync(string playerId, CancellationToken cancellationToken)
+    {
+        foreach (var room in _rooms.Values)
+        {
+            if (await room.KickPlayerAsync(playerId, cancellationToken)) return true;
+        }
+        return false;
     }
 
 
@@ -80,6 +96,8 @@ public sealed class ConnectionManager
         await socket.SendAsync(payload, WebSocketMessageType.Text, true, cancellationToken);
     }
 }
+
+public sealed record AdminStatusSnapshot(int OnlineCount, IReadOnlyList<PlayerAdminSnapshot> Players, IReadOnlyList<DuelAdminSnapshot> Duels);
 
 
     // private async Task ReceiveLoopAsync(ClientConnection connection, CancellationToken cancellationToken)

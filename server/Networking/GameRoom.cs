@@ -28,6 +28,11 @@ public sealed class GameRoom
     }
 
     public int PlayerCount => _players.Count;
+    public IReadOnlyList<PlayerAdminSnapshot> GetAdminPlayers() => _players.Values
+        .Select(player => new PlayerAdminSnapshot(player.Id, player.State.Name, player.State.AvatarId, player.State.Score, player.State.Area, _duels.IsInDuel(player.Id)))
+        .OrderByDescending(player => player.Score)
+        .ThenBy(player => player.Name, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
     public bool TryJoin(ClientConnection playerConnection, JsonElement? payload, out string rejectionReason)
     {
@@ -121,6 +126,31 @@ public sealed class GameRoom
                 _logger.LogInformation("Player {PlayerId} disconnected", playerConnection.Id);
             }
         }
+    }
+
+    public async Task<bool> KickPlayerAsync(string playerId, CancellationToken cancellationToken)
+    {
+        if (!_players.TryGetValue(playerId, out var player)) return false;
+
+        var name = player.State.Name;
+        RemovePlayer(player);
+        await BroadcastMessageAsync(new ServerMessage("chat", "system", new
+        {
+            name = "Hệ thống",
+            text = $"Người chơi {name} đã bị kick bởi admin"
+        }), exceptPlayerId: null, cancellationToken);
+
+        try
+        {
+            if (player.Socket.State == WebSocketState.Open)
+            {
+                await player.Socket.CloseOutputAsync(WebSocketCloseStatus.PolicyViolation, "Kicked by admin", cancellationToken);
+            }
+        }
+        catch (WebSocketException) { }
+        catch (OperationCanceledException) { }
+
+        return true;
     }
 
     public void Start()
@@ -405,3 +435,5 @@ public sealed class GameRoom
     }
 
 }
+
+public sealed record PlayerAdminSnapshot(string Id, string Name, string AvatarId, int Score, string Area, bool InDuel);
