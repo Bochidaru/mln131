@@ -69,7 +69,7 @@ export function HUD() {
     <aside className="lobby-players" aria-label="Người đang tham quan">
       <header><span>Trong bảo tàng</span><b>{Object.keys(remotePlayers).length + 1}</b></header>
       <ul>
-        <li><i className={multiplayerConnected ? 'is-online' : ''} />{playerName || 'Bạn'} <small>{score} điểm</small></li>
+        <li className="is-self" aria-current="true"><i className={multiplayerConnected ? 'is-online' : ''} />{playerName || 'Bạn'} <small>{score} điểm</small></li>
         {Object.values(remotePlayers).map((player) => <li key={player.id}><i className="is-online" />{player.name}<small>{player.score} điểm</small></li>)}
       </ul>
     </aside>

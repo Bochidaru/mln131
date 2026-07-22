@@ -120,6 +120,7 @@ kbd { font: inherit; }
 .lobby-players header b { display: grid; place-items: center; min-width: 17px; height: 17px; color: #1a1d1a; background: #d8b16c; font-size: 8px; }
 .lobby-players ul { max-height: 94px; margin: 0; padding: 5px 11px 7px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; list-style: none; }
 .lobby-players li { display: flex; align-items: center; gap: 7px; min-height: 22px; color: rgba(255,255,255,.75); font: 500 9px 'Be Vietnam Pro', sans-serif; text-transform: none; letter-spacing: .02em; }
+.lobby-players li.is-self { position: sticky; z-index: 1; top: 0; color: #fff; background: #262b27; box-shadow: 0 1px rgba(216,177,108,.28); }
 .lobby-players li i { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: #777; }.lobby-players li i.is-online { background: #7bbb79; box-shadow: 0 0 0 3px rgba(123,187,121,.12); }
 .lobby-players li small { margin-left: auto; color: #bea675; font-size: 7px; text-transform: uppercase; }
 .crosshair { position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); opacity: .72; transition: .2s; }
