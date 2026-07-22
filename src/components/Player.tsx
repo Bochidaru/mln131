@@ -86,6 +86,16 @@ export function Player() {
       keys.current.add(event.code)
     }
     const up = (event: KeyboardEvent) => keys.current.delete(event.code)
+    const releaseInputs = () => {
+      keys.current.clear()
+      duelJumpQueued.current = false
+    }
+    const pointerLockChanged = () => {
+      if (!document.pointerLockElement) releaseInputs()
+    }
+    const visibilityChanged = () => {
+      if (document.hidden) releaseInputs()
+    }
     const shoot = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null
       if (target?.closest('button, input, textarea, select')) return
@@ -97,10 +107,16 @@ export function Player() {
     addEventListener('keydown', down)
     addEventListener('keyup', up)
     addEventListener('mousedown', shoot)
+    addEventListener('blur', releaseInputs)
+    document.addEventListener('pointerlockchange', pointerLockChanged)
+    document.addEventListener('visibilitychange', visibilityChanged)
     return () => {
       removeEventListener('keydown', down)
       removeEventListener('keyup', up)
       removeEventListener('mousedown', shoot)
+      removeEventListener('blur', releaseInputs)
+      document.removeEventListener('pointerlockchange', pointerLockChanged)
+      document.removeEventListener('visibilitychange', visibilityChanged)
     }
   }, [camera])
 
@@ -307,5 +323,9 @@ export function Player() {
   })
 
   if (mobile || !entered) return null
-  return <PointerLockControls ref={controls} pointerSpeed={mouseSensitivity} selector={activePoster || skillShopOpen ? '#pointer-lock-disabled' : '#museum-canvas'} makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => setControlsLocked(false)} />
+  return <PointerLockControls ref={controls} pointerSpeed={mouseSensitivity} selector={activePoster || skillShopOpen ? '#pointer-lock-disabled' : '#museum-canvas'} makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => {
+    keys.current.clear()
+    duelJumpQueued.current = false
+    setControlsLocked(false)
+  }} />
 }

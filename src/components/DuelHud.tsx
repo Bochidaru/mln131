@@ -10,16 +10,17 @@ function cooldownLabel(readyAt: number, now: number) {
 
 export function DuelHud() {
   const duel = useStore((state) => state.duel)
+  const duelId = duel?.id
   const playerId = useStore((state) => state.multiplayerPlayerId)
   const result = useStore((state) => state.duelFinished)
   const forfeitDuel = useStore((state) => state.forfeitDuel)
-  const [now, setNow] = useState(0)
+  const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    if (!duel || result) return
+    if (!duelId || result) return
     const timer = window.setInterval(() => setNow(Date.now()), 100)
     return () => window.clearInterval(timer)
-  }, [duel, result])
+  }, [duelId, result])
 
   if (!duel || !playerId) return null
   const self = duel.players[playerId]
