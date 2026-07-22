@@ -64,6 +64,7 @@ interface MuseumState {
   playerName: string
   avatarId: string
   graphicsQuality: 'auto' | 'low' | 'medium' | 'high'
+  mouseSensitivity: number
   settingsOpen: boolean
   entranceDoorOpen: boolean
   score: number
@@ -102,6 +103,7 @@ interface MuseumState {
   setPlayerName: (name: string) => void
   setAvatarId: (avatarId: string) => void
   setGraphicsQuality: (quality: MuseumState['graphicsQuality']) => void
+  setMouseSensitivity: (sensitivity: number) => void
   setSettingsOpen: (open: boolean) => void
   setEntranceDoorOpen: (open: boolean) => void
   setScore: (score: number) => void
@@ -147,6 +149,7 @@ export const useStore = create<MuseumState>((set) => ({
   playerName: '',
   avatarId: 'block-explorer',
   graphicsQuality: 'auto',
+  mouseSensitivity: 1,
   settingsOpen: false,
   entranceDoorOpen: false,
   score: 0,
@@ -193,6 +196,7 @@ export const useStore = create<MuseumState>((set) => ({
   setPlayerName: (playerName) => set({ playerName }),
   setAvatarId: (avatarId) => set({ avatarId }),
   setGraphicsQuality: (graphicsQuality) => set({ graphicsQuality }),
+  setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
   setScore: (score) => set({ score }),

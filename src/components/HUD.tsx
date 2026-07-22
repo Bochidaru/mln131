@@ -27,6 +27,8 @@ export function HUD() {
   const multiplayerConnected = useStore((state) => state.multiplayerConnected)
   const graphicsQuality = useStore((state) => state.graphicsQuality)
   const setGraphicsQuality = useStore((state) => state.setGraphicsQuality)
+  const mouseSensitivity = useStore((state) => state.mouseSensitivity)
+  const setMouseSensitivity = useStore((state) => state.setMouseSensitivity)
   const settingsOpen = useStore((state) => state.settingsOpen)
   const setSettingsOpen = useStore((state) => state.setSettingsOpen)
   const toggleAudio = useStore((state) => state.toggleAudio)
@@ -95,6 +97,7 @@ export function HUD() {
         <div className="settings-section"><span>Đồ họa</span><p>Tùy chọn này áp dụng ngay lập tức.</p>
           <div>{(['auto', 'low', 'medium', 'high'] as const).map((quality) => <button key={quality} className={graphicsQuality === quality ? 'is-selected' : ''} onClick={() => setGraphicsQuality(quality)}>{({ auto: 'Tự động', low: 'Thấp', medium: 'Trung bình', high: 'Cao' } as const)[quality]}</button>)}</div>
         </div>
+        <div className="settings-section sensitivity-setting"><span>Độ nhạy chuột <b>{Math.round(mouseSensitivity * 100)}%</b></span><input type="range" min="0.25" max="2" step="0.05" value={mouseSensitivity} onChange={(event) => setMouseSensitivity(Number(event.target.value))} aria-label="Độ nhạy chuột" /></div>
         <div className="settings-section"><span>Âm thanh</span><button className="setting-audio" onClick={toggleAudio} aria-label={audioOn ? uiText.audioOn : uiText.audioOff}>{audioOn ? 'Âm thanh: Bật' : 'Âm thanh: Tắt'}</button></div>
       </section>}
     </div>

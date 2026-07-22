@@ -44,6 +44,7 @@ export function Player() {
   const mobile = useIsMobile()
   const entered = useStore((state) => state.entered)
   const activePoster = useStore((state) => state.activePoster)
+  const mouseSensitivity = useStore((state) => state.mouseSensitivity)
   const setControlsLocked = useStore((state) => state.setControlsLocked)
 
   useEffect(() => {
@@ -174,8 +175,8 @@ export function Player() {
       if (focusedSeatId.current !== null) { store.setFocusedSeat(null); focusedSeatId.current = null }
       if (mobile && (store.mobileLook.x || store.mobileLook.y)) {
         euler.setFromQuaternion(frameCamera.quaternion)
-        euler.y -= store.mobileLook.x * 0.028
-        euler.x = Math.max(-1.25, Math.min(1.25, euler.x - store.mobileLook.y * 0.024))
+        euler.y -= store.mobileLook.x * 0.028 * store.mouseSensitivity
+        euler.x = Math.max(-1.25, Math.min(1.25, euler.x - store.mobileLook.y * 0.024 * store.mouseSensitivity))
         frameCamera.quaternion.setFromEuler(euler)
         store.setMobileLook({ x: 0, y: 0 })
       }
@@ -242,8 +243,8 @@ export function Player() {
 
     if (mobile && (store.mobileLook.x || store.mobileLook.y)) {
       euler.setFromQuaternion(frameCamera.quaternion)
-      euler.y -= store.mobileLook.x * 0.028
-      euler.x = Math.max(-1.25, Math.min(1.25, euler.x - store.mobileLook.y * 0.024))
+      euler.y -= store.mobileLook.x * 0.028 * store.mouseSensitivity
+      euler.x = Math.max(-1.25, Math.min(1.25, euler.x - store.mobileLook.y * 0.024 * store.mouseSensitivity))
       frameCamera.quaternion.setFromEuler(euler)
       store.setMobileLook({ x: 0, y: 0 })
     }
@@ -256,5 +257,5 @@ export function Player() {
   })
 
   if (mobile || !entered) return null
-  return <PointerLockControls ref={controls} selector={activePoster ? '#pointer-lock-disabled' : '#museum-canvas'} makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => setControlsLocked(false)} />
+  return <PointerLockControls ref={controls} pointerSpeed={mouseSensitivity} selector={activePoster ? '#pointer-lock-disabled' : '#museum-canvas'} makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => setControlsLocked(false)} />
 }
