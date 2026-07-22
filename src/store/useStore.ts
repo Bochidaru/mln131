@@ -72,10 +72,7 @@ export interface DuelFinished {
 
 let outgoingActionId = 0
 const nextOutgoingActionId = () => ++outgoingActionId
-const savedGraphicsQuality = window.localStorage.getItem('mln131-graphics-quality')
-const initialGraphicsQuality: GraphicsQuality = savedGraphicsQuality === 'low' || savedGraphicsQuality === 'high'
-  ? savedGraphicsQuality
-  : 'auto'
+const initialGraphicsQuality: GraphicsQuality = 'auto'
 const autoGraphicsQuality = detectAutoGraphicsQuality()
 
 interface MuseumState {
@@ -279,10 +276,7 @@ export const useStore = create<MuseumState>((set) => ({
   }),
   setPlayerEmotePose: (playerEmotePose) => set({ playerEmotePose: Math.min(4, Math.max(0, playerEmotePose)) }),
   setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
-  setGraphicsQuality: (graphicsQuality) => {
-    window.localStorage.setItem('mln131-graphics-quality', graphicsQuality)
-    set({ graphicsQuality })
-  },
+  setGraphicsQuality: (graphicsQuality) => set({ graphicsQuality }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
   setScore: (score) => set({ score }),
