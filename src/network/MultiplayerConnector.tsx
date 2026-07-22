@@ -38,7 +38,7 @@ type ServerMessage = {
     winnerId?: string
     transfer?: number
     returnPose?: { x: number; z: number; dirX: number; dirZ: number }
-    duelPlayers?: { playerId: string; x: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
+    duelPlayers?: { playerId: string; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
     score?: number
     quizRoomId?: number
     correct?: number
@@ -239,7 +239,7 @@ export function MultiplayerConnector() {
       if (message.type === 'duelResult') {
         if (message.payload?.score !== undefined) store.setScore(message.payload.score)
         if (message.payload?.returnPose) store.setPlayerPose(message.payload.returnPose)
-        store.endDuel()
+        store.endDuel(message.payload?.returnPose)
       }
     }
 

@@ -137,6 +137,13 @@ export function Player() {
     const cappedDelta = Math.min(delta, 0.05)
     const frameCamera = state.camera
 
+    if (store.duelReturnPose) {
+      const pose = store.duelReturnPose
+      frameCamera.position.set(pose.x, eyeHeight, pose.z)
+      frameCamera.lookAt(pose.x + pose.dirX, eyeHeight, pose.z + pose.dirZ)
+      store.clearDuelReturnPose()
+    }
+
     frameCamera.getWorldDirection(forward)
     forward.y = 0
     forward.normalize()
@@ -151,7 +158,14 @@ export function Player() {
       if (direction.lengthSq() > 1) direction.normalize()
       if (state.clock.elapsedTime - lastDuelInput.current > 1 / 32) {
         frameCamera.getWorldDirection(forward)
-        store.sendDuel('duelInput', { moveX: direction.x, moveZ: direction.z, dirX: forward.x, dirZ: forward.z })
+        store.sendDuel('duelInput', {
+          moveX: direction.x,
+          moveZ: direction.z,
+          dirX: forward.x,
+          dirZ: forward.z,
+          sprint: keys.current.has('ShiftLeft') || keys.current.has('ShiftRight') ? 1 : 0,
+          jump: keys.current.has('Space') ? 1 : 0,
+        })
         lastDuelInput.current = state.clock.elapsedTime
       }
       return

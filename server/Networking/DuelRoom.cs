@@ -12,6 +12,10 @@ public sealed class DuelRoom
     private const float ArenaX = 200f;
     private const float ArenaZ = 200f;
     private const float MoveSpeed = 5f;
+    private const float SprintMoveSpeed = 7f;
+    private const float EyeHeight = 1.68f;
+    private const float JumpSpeed = 5f;
+    private const float Gravity = 14f;
     private const float PlayerRadius = 0.55f;
     private readonly ClientConnection _first;
     private readonly ClientConnection _second;
@@ -20,6 +24,7 @@ public sealed class DuelRoom
     private readonly Dictionary<string, int> _health = new();
     private readonly Dictionary<string, int> _wins = new();
     private readonly Dictionary<string, DateTimeOffset> _lastShot = new();
+    private readonly Dictionary<string, float> _verticalVelocity = new();
     private readonly Action<DuelRoom> _finished;
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
@@ -48,6 +53,7 @@ public sealed class DuelRoom
         };
         _health[first.Id] = _health[second.Id] = 100;
         _wins[first.Id] = _wins[second.Id] = 0;
+        _verticalVelocity[first.Id] = _verticalVelocity[second.Id] = 0;
         SpawnRound();
     }
 
@@ -99,12 +105,24 @@ public sealed class DuelRoom
             if (!_inputs.TryGetValue(player.Id, out var input)) continue;
             var movement = new Vector2(Math.Clamp(input.MoveX, -1, 1), Math.Clamp(input.MoveZ, -1, 1));
             if (movement.LengthSquared() > 1) movement = Vector2.Normalize(movement);
-            var nextX = Math.Clamp(player.State.X + movement.X * MoveSpeed * delta, ArenaX - ArenaLimit, ArenaX + ArenaLimit);
-            var nextZ = Math.Clamp(player.State.Z + movement.Y * MoveSpeed * delta, ArenaZ - ArenaLimit, ArenaZ + ArenaLimit);
+            var speed = input.Sprinting ? SprintMoveSpeed : MoveSpeed;
+            var nextX = Math.Clamp(player.State.X + movement.X * speed * delta, ArenaX - ArenaLimit, ArenaX + ArenaLimit);
+            var nextZ = Math.Clamp(player.State.Z + movement.Y * speed * delta, ArenaZ - ArenaLimit, ArenaZ + ArenaLimit);
             if (!HitsCover(nextX, nextZ))
             {
                 player.State.X = nextX;
                 player.State.Z = nextZ;
+            }
+            if (input.Jump && player.State.Y <= EyeHeight + 0.001f)
+            {
+                _verticalVelocity[player.Id] = JumpSpeed;
+            }
+            _verticalVelocity[player.Id] -= Gravity * delta;
+            player.State.Y += _verticalVelocity[player.Id] * delta;
+            if (player.State.Y <= EyeHeight)
+            {
+                player.State.Y = EyeHeight;
+                _verticalVelocity[player.Id] = 0;
             }
             player.State.DirX = input.DirX; player.State.DirZ = input.DirZ; player.State.Area = "duel";
         }
@@ -121,14 +139,16 @@ public sealed class DuelRoom
     {
         _first.State.X = ArenaX - 9; _first.State.Z = ArenaZ; _first.State.DirX = 1; _first.State.DirZ = 0;
         _second.State.X = ArenaX + 9; _second.State.Z = ArenaZ; _second.State.DirX = -1; _second.State.DirZ = 0;
+        _first.State.Y = _second.State.Y = EyeHeight;
+        _verticalVelocity[_first.Id] = _verticalVelocity[_second.Id] = 0;
         _health[_first.Id] = _health[_second.Id] = 100;
     }
 
     private async Task BroadcastAsync(CancellationToken token)
     {
         var payload = new { duelId = Id, duelPlayers = new[] {
-            new { playerId = _first.Id, x = _first.State.X, z = _first.State.Z, dirX = _first.State.DirX, dirZ = _first.State.DirZ, hp = _health[_first.Id], wins = _wins[_first.Id] },
-            new { playerId = _second.Id, x = _second.State.X, z = _second.State.Z, dirX = _second.State.DirX, dirZ = _second.State.DirZ, hp = _health[_second.Id], wins = _wins[_second.Id] },
+            new { playerId = _first.Id, x = _first.State.X, y = _first.State.Y, z = _first.State.Z, dirX = _first.State.DirX, dirZ = _first.State.DirZ, hp = _health[_first.Id], wins = _wins[_first.Id] },
+            new { playerId = _second.Id, x = _second.State.X, y = _second.State.Y, z = _second.State.Z, dirX = _second.State.DirX, dirZ = _second.State.DirZ, hp = _health[_second.Id], wins = _wins[_second.Id] },
         }};
         await Task.WhenAll(_first.SendAsync("duelSnapshot", payload, token), _second.SendAsync("duelSnapshot", payload, token));
     }
@@ -175,7 +195,7 @@ public sealed class DuelRoom
         player.State.X = saved.X; player.State.Y = saved.Y; player.State.Z = saved.Z; player.State.DirX = saved.DirX; player.State.DirZ = saved.DirZ; player.State.Area = saved.Area;
     }
 
-    public readonly record struct DuelInput(float MoveX, float MoveZ, float DirX, float DirZ);
+    public readonly record struct DuelInput(float MoveX, float MoveZ, float DirX, float DirZ, bool Sprinting, bool Jump);
     private readonly record struct SavedPose(float X, float Y, float Z, float DirX, float DirZ, string Area)
     { public SavedPose(PlayerState state) : this(state.X, state.Y, state.Z, state.DirX, state.DirZ, state.Area) { } }
 }

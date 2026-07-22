@@ -19,31 +19,27 @@ import { Player } from './Player'
 import { RemotePlayers } from './RemotePlayers'
 import { Surroundings } from './Surroundings'
 import { MultiplayerConnector } from '../network/MultiplayerConnector'
-import { useStore } from '../store/useStore'
 
-function PostEffects({ mediumQuality }: { mediumQuality: boolean }) {
+function PostEffects() {
   return <EffectComposer multisampling={0}>
     <SMAA />
-    {mediumQuality ? <></> : <Bloom intensity={0.18} luminanceThreshold={1.15} luminanceSmoothing={0.5} mipmapBlur />}
+    <Bloom intensity={0.18} luminanceThreshold={1.15} luminanceSmoothing={0.5} mipmapBlur />
     <Vignette eskil={false} offset={0.28} darkness={0.24} />
-    {mediumQuality ? <></> : <Noise opacity={0.028} />}
+    <Noise opacity={0.028} />
   </EffectComposer>
 }
 
 export function MuseumScene() {
   // Keep the museum usable on integrated graphics and older laptops.
   const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
-  const graphicsQuality = useStore((state) => state.graphicsQuality)
   const autoLowEnd = navigator.hardwareConcurrency <= 4 || (deviceMemory !== undefined && deviceMemory <= 4)
-  const resolvedQuality = graphicsQuality === 'auto' ? (autoLowEnd ? 'low' : 'high') : graphicsQuality
-  const lowEndDevice = resolvedQuality === 'low'
-  const mediumQuality = resolvedQuality === 'medium'
+  const lowEndDevice = autoLowEnd
 
   return <main className="museum">
     <Canvas
       id="museum-canvas"
       camera={{ fov: 58, near: 0.08, far: 190 }}
-      dpr={lowEndDevice ? [1, 1.15] : mediumQuality ? [1, 1.35] : [1, 1.65]}
+      dpr={lowEndDevice ? [1, 1.15] : [1, 1.65]}
       gl={{ antialias: false, powerPreference: 'high-performance', alpha: false }}
       shadows={lowEndDevice ? false : { type: PCFSoftShadowMap }}
       onCreated={({ gl }) => {
@@ -83,7 +79,7 @@ export function MuseumScene() {
       <Player />
       <RemotePlayers />
       <DuelArena />
-      {lowEndDevice ? <></> : <PostEffects mediumQuality={mediumQuality} />}
+      {lowEndDevice ? <></> : <PostEffects />}
     </Canvas>
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
     <AudioController />

@@ -281,9 +281,9 @@ public sealed class GameRoom
             }
             else if (message?.Type == "duelInput" && message.Payload is JsonElement inputPayload)
             {
-                if (TryReadDuelVector(inputPayload, out var moveX, out var moveZ, out var dirX, out var dirZ))
+                if (TryReadDuelVector(inputPayload, out var moveX, out var moveZ, out var dirX, out var dirZ, out var sprinting, out var jump))
                 {
-                    _duels.Input(connection.Id, new DuelRoom.DuelInput(moveX, moveZ, dirX, dirZ));
+                    _duels.Input(connection.Id, new DuelRoom.DuelInput(moveX, moveZ, dirX, dirZ, sprinting, jump));
                 }
             }
             else if (message?.Type == "duelShoot" && message.Payload is JsonElement shootPayload)
@@ -323,9 +323,11 @@ public sealed class GameRoom
         connection.State.TickId = _tickCounter;
     }
 
-    private static bool TryReadDuelVector(JsonElement payload, out float moveX, out float moveZ, out float dirX, out float dirZ)
+    private static bool TryReadDuelVector(JsonElement payload, out float moveX, out float moveZ, out float dirX, out float dirZ, out bool sprinting, out bool jump)
     {
-        moveX = moveZ = dirX = dirZ = 0;
+        moveX = moveZ = dirX = dirZ = 0; sprinting = jump = false;
+        if (payload.TryGetProperty("sprint", out var sprintElement)) sprinting = sprintElement.ValueKind == JsonValueKind.True || sprintElement.TryGetInt32(out var sprintValue) && sprintValue != 0;
+        if (payload.TryGetProperty("jump", out var jumpElement)) jump = jumpElement.ValueKind == JsonValueKind.True || jumpElement.TryGetInt32(out var jumpValue) && jumpValue != 0;
         return payload.TryGetProperty("moveX", out var moveXElement) && moveXElement.TryGetSingle(out moveX)
             && payload.TryGetProperty("moveZ", out var moveZElement) && moveZElement.TryGetSingle(out moveZ)
             && payload.TryGetProperty("dirX", out var dirXElement) && dirXElement.TryGetSingle(out dirX)
