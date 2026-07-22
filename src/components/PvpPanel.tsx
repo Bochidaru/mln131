@@ -7,6 +7,7 @@ export function PvpPanel() {
   const invite = useStore((state) => state.pvpInvite)
   const outgoingInvite = useStore((state) => state.pvpOutgoingInvite)
   const cooldownUntil = useStore((state) => state.pvpCooldownUntil)
+  const score = useStore((state) => state.score)
   const duel = useStore((state) => state.duel)
   const request = useStore((state) => state.requestPvp)
   const respond = useStore((state) => state.respondPvp)
@@ -37,10 +38,15 @@ export function PvpPanel() {
   const inviteSeconds = invite ? Math.max(0, Math.ceil((invite.expiresAt - now) / 1000)) : 0
   const outgoingSeconds = outgoingInvite ? Math.max(0, Math.ceil((outgoingInvite.expiresAt - now) / 1000)) : 0
   const cooldownSeconds = Math.max(0, Math.ceil((cooldownUntil - now) / 1000))
+  const hasEnoughPoints = score >= 10 && (target?.score ?? 0) >= 10
+  const pointsMessage = score < 10
+    ? 'Bạn chưa đủ 10 điểm để PvP'
+    : `${target?.name} chưa đủ 10 điểm để tham gia PvP`
 
   if (duel) return null
   if (invite && inviteSeconds > 0) return <div className="pvp-invite"><strong>{invite.name} thách đấu bạn</strong><span>Chạm 3 · phần thưởng tối đa 5 điểm · còn {inviteSeconds}s</span><button onClick={() => respond(invite.fromPlayerId, true)}>Đồng ý</button><button onClick={() => respond(invite.fromPlayerId, false)}>Từ chối</button></div>
   if (outgoingInvite && outgoingSeconds > 0) return <div className="pvp-invite pvp-invite-sent"><strong>Đã gửi lời mời thách đấu</strong><span>Đang chờ {outgoingInvite.name} phản hồi · còn {outgoingSeconds}s</span></div>
   if (!target) return null
+  if (!hasEnoughPoints) return <div className="pvp-near"><span>{pointsMessage}</span></div>
   return <div className="pvp-near"><span><kbd>E</kbd> Thách đấu {target.name}</span><button disabled={cooldownSeconds > 0} onClick={() => request(target.id, target.name)}>{cooldownSeconds > 0 ? `Chờ ${cooldownSeconds}s` : 'PvP'}</button></div>
 }

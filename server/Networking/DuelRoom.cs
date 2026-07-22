@@ -10,6 +10,7 @@ public sealed class DuelRoom
 {
     public const int TickRate = 64;
     private static readonly TimeSpan ResultDisplayDuration = TimeSpan.FromSeconds(3);
+    private const int DuelStake = 5;
     private const float ArenaLimit = 28f;
     private const float ArenaX = 200f;
     private const float ArenaZ = 200f;
@@ -207,7 +208,7 @@ public sealed class DuelRoom
         var winner = winnerId == _first.Id ? _first : _second;
         var loser = winnerId == _first.Id ? _second : _first;
         if (aborted && _wins[winnerId] < 3) _wins[winnerId] = 3;
-        var transfer = Math.Min(5, loser.State.Score);
+        var transfer = DuelStake;
         loser.State.Score -= transfer;
         winner.State.Score += transfer;
         _ = CompleteAfterResultDisplayAsync(winner, loser, transfer, aborted);

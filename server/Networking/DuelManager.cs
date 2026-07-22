@@ -5,6 +5,7 @@ namespace server.Networking;
 public sealed class DuelManager
 {
     private static readonly TimeSpan InviteDuration = TimeSpan.FromSeconds(10);
+    private const int MinimumScoreToDuel = 10;
     private readonly ConcurrentDictionary<string, DuelRoom> _duels = new();
     private readonly ConcurrentDictionary<string, string> _playerDuels = new();
     private readonly ConcurrentDictionary<string, DuelInvite> _invites = new();
@@ -19,6 +20,16 @@ public sealed class DuelManager
     public void Request(ClientConnection requester, ClientConnection target)
     {
         var now = DateTimeOffset.UtcNow;
+        if (requester.State.Score < MinimumScoreToDuel)
+        {
+            _ = requester.SendAsync("pvpRequestRejected", new { reason = "Bạn cần ít nhất 10 điểm để thách đấu." }, CancellationToken.None);
+            return;
+        }
+        if (target.State.Score < MinimumScoreToDuel)
+        {
+            _ = requester.SendAsync("pvpRequestRejected", new { reason = "Người chơi này chưa đủ 10 điểm để tham gia PvP." }, CancellationToken.None);
+            return;
+        }
         if (_requestCooldowns.TryGetValue(requester.Id, out var cooldownUntil) && cooldownUntil > now)
         {
             _ = requester.SendAsync("pvpCooldown", new { cooldownUntil }, CancellationToken.None);
@@ -64,6 +75,13 @@ public sealed class DuelManager
         if (!accepted || IsInDuel(target.Id) || IsInDuel(requester.Id))
         {
             _ = requester.SendAsync("pvpDeclined", new { targetPlayerId = target.Id }, CancellationToken.None);
+            return;
+        }
+        if (requester.State.Score < MinimumScoreToDuel || target.State.Score < MinimumScoreToDuel)
+        {
+            const string reason = "Cả hai người chơi cần ít nhất 10 điểm để tham gia PvP.";
+            _ = requester.SendAsync("pvpRequestRejected", new { reason }, CancellationToken.None);
+            _ = target.SendAsync("pvpRequestRejected", new { reason }, CancellationToken.None);
             return;
         }
 

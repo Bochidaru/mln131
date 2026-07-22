@@ -68,6 +68,13 @@ class TestClient {
   }
 }
 
+async function earnQuizPoints(client) {
+  client.send('pose', { x: 0, y: 1.68, z: 0, dirX: 0, dirZ: -1, area: 'room-1', seated: true, timestamp: Date.now() })
+  client.send('quizReward', { roomId: 1, correct: 5 })
+  const result = await client.waitFor('quizResult', (message) => message.payload?.score === 10)
+  assert.equal(result.payload.earned, 10)
+}
+
 const suffix = Date.now().toString(36)
 const first = new TestClient(`DuelTest-A-${suffix}`)
 const second = new TestClient(`DuelTest-B-${suffix}`)
@@ -77,6 +84,12 @@ const fourth = new TestClient(`DuelTest-D-${suffix}`)
 try {
   await first.connect()
   await second.connect()
+  first.send('pvpRequest', { targetPlayerId: second.id })
+  const insufficientPoints = await first.waitFor('pvpRequestRejected')
+  assert.match(insufficientPoints.payload.reason, /ít nhất 10 điểm/)
+  await Promise.all([earnQuizPoints(first), earnQuizPoints(second)])
+  first.messages = []
+  second.messages = []
   first.send('pvpRequest', { targetPlayerId: second.id })
   const [sent, received] = await Promise.all([
     first.waitFor('pvpInviteSent', (message) => message.payload?.targetPlayerId === second.id),
@@ -154,6 +167,9 @@ try {
 
   await third.connect()
   await fourth.connect()
+  await Promise.all([earnQuizPoints(third), earnQuizPoints(fourth)])
+  third.messages = []
+  fourth.messages = []
   third.send('pvpRequest', { targetPlayerId: fourth.id })
   await fourth.waitFor('pvpInvite', (message) => message.payload?.fromPlayerId === third.id)
   await Promise.all([

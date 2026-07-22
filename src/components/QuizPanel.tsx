@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { drawQuiz } from '../data/quiz'
 import { useStore } from '../store/useStore'
 
@@ -18,17 +18,34 @@ export function QuizPanel() {
 
 function QuizRound({ roomId, submit }: { roomId: number; submit: (roomId: number, correct: number) => void }) {
   const [questions] = useState(() => drawQuiz(roomId))
-  const [answers, setAnswers] = useState<number[]>([])
-  const question = questions[answers.length]
+  const [questionIndex, setQuestionIndex] = useState(0)
+  const [correctCount, setCorrectCount] = useState(0)
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
+  const advanceTimer = useRef<number | null>(null)
+  const question = questions[questionIndex]
+
+  useEffect(() => () => {
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+  }, [])
+
   if (!question) return null
   const choose = (answer: number) => {
-    const next = [...answers, answer]
-    if (next.length === questions.length) {
-      submit(roomId, next.reduce((total, value, index) => total + (value === questions[index].correctIndex ? 1 : 0), 0))
-      setAnswers([])
-      return
-    }
-    setAnswers(next)
+    if (selectedAnswer !== null) return
+    const isCorrect = answer === question.correctIndex
+    const nextCorrectCount = correctCount + (isCorrect ? 1 : 0)
+    setSelectedAnswer(answer)
+    advanceTimer.current = window.setTimeout(() => {
+      if (questionIndex + 1 === questions.length) submit(roomId, nextCorrectCount)
+      else {
+        setQuestionIndex((index) => index + 1)
+        setCorrectCount(nextCorrectCount)
+        setSelectedAnswer(null)
+      }
+    }, 1000)
   }
-  return <><small>QUIZ PHÒNG {roomId} · {answers.length + 1}/5</small><h2>{question.question}</h2><div>{question.options.map((option, index) => <button key={option} onClick={() => choose(index)}>{option}</button>)}</div></>
+  return <><small>QUIZ PHÒNG {roomId} · {questionIndex + 1}/5</small><h2>{question.question}</h2><div>{question.options.map((option, index) => {
+    const isRevealed = selectedAnswer !== null
+    const className = isRevealed ? index === question.correctIndex ? 'is-correct' : index === selectedAnswer ? 'is-wrong' : '' : ''
+    return <button key={option} className={className} disabled={isRevealed} onClick={() => choose(index)}>{option}</button>
+  })}</div>{selectedAnswer !== null && <p className="quiz-feedback">{selectedAnswer === question.correctIndex ? 'Chính xác. ' : 'Chưa đúng. '}Đáp án đúng: {question.options[question.correctIndex]}</p>}</>
 }
