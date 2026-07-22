@@ -86,7 +86,7 @@ try {
   await second.connect()
   first.send('pvpRequest', { targetPlayerId: second.id })
   const insufficientPoints = await first.waitFor('pvpRequestRejected')
-  assert.match(insufficientPoints.payload.reason, /ít nhất 10 điểm/)
+  assert.match(insufficientPoints.payload.reason, /ít nhất 5 điểm/)
   await Promise.all([earnQuizPoints(first), earnQuizPoints(second)])
   first.messages = []
   second.messages = []

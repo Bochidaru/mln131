@@ -263,7 +263,7 @@ export const useStore = create<MuseumState>((set) => ({
   queueChat: (text) => set({ outgoingChat: { id: nextOutgoingActionId(), text } }),
   requestPvp: (targetPlayerId, name) => set((state) => {
     const now = Date.now()
-    if (state.score < 10 || state.pvpOutgoingInvite || state.pvpCooldownUntil > now) return state
+    if (state.score < 5 || state.pvpOutgoingInvite || state.pvpCooldownUntil > now) return state
     const expiresAt = now + 10_000
     return {
       outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpRequest', payload: { targetPlayerId } },

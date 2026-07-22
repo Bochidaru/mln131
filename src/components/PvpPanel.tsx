@@ -38,10 +38,10 @@ export function PvpPanel() {
   const inviteSeconds = invite ? Math.max(0, Math.ceil((invite.expiresAt - now) / 1000)) : 0
   const outgoingSeconds = outgoingInvite ? Math.max(0, Math.ceil((outgoingInvite.expiresAt - now) / 1000)) : 0
   const cooldownSeconds = Math.max(0, Math.ceil((cooldownUntil - now) / 1000))
-  const hasEnoughPoints = score >= 10 && (target?.score ?? 0) >= 10
-  const pointsMessage = score < 10
-    ? 'Bạn chưa đủ 10 điểm để PvP'
-    : `${target?.name} chưa đủ 10 điểm để tham gia PvP`
+  const hasEnoughPoints = score >= 5 && (target?.score ?? 0) >= 5
+  const pointsMessage = score < 5
+    ? 'Bạn chưa đủ 5 điểm để PvP'
+    : `${target?.name} chưa đủ 5 điểm để tham gia PvP`
 
   if (duel) return null
   if (invite && inviteSeconds > 0) return <div className="pvp-invite"><strong>{invite.name} thách đấu bạn</strong><span>Chạm 3 · phần thưởng tối đa 5 điểm · còn {inviteSeconds}s</span><button onClick={() => respond(invite.fromPlayerId, true)}>Đồng ý</button><button onClick={() => respond(invite.fromPlayerId, false)}>Từ chối</button></div>
