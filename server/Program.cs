@@ -28,6 +28,8 @@ app.UseCors();
 
 var staticFileTypes = new FileExtensionContentTypeProvider();
 staticFileTypes.Mappings[".hdr"] = "application/octet-stream";
+staticFileTypes.Mappings[".glb"] = "model/gltf-binary";
+staticFileTypes.Mappings[".gltf"] = "model/gltf+json";
 
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions
