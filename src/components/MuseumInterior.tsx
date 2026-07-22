@@ -601,6 +601,13 @@ function LobbySculpture({ lowEnd }: { lowEnd: boolean }) {
           roughness={0.3}
         />
       </mesh>
+      <Text position={[0, 0.62, 0.94]} fontSize={0.13} letterSpacing={0.12} color="#7f2e26" anchorX="center" anchorY="middle">
+        KỸ NĂNG DUEL · E
+      </Text>
+      <mesh position={[0, 0.13, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.18, 1.25, lowEnd ? 24 : 48]} />
+        <meshBasicMaterial color="#d8b16c" transparent opacity={0.68} />
+      </mesh>
       {!lowEnd && <pointLight
         position={[0, 2.55, 0]}
         color="#ffe0b0"

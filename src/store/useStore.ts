@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { PosterData } from '../data/content'
 import { getAreaAt, type MuseumArea } from '../data/layout'
+import { DEFAULT_ULTIMATE_SKILL, type UltimateSkillId } from '../data/skills'
 import { detectAutoGraphicsQuality, type GraphicsQuality, type ResolvedGraphicsQuality } from '../utils/graphicsQuality'
 
 export interface PlayerPose {
@@ -70,6 +71,25 @@ export interface DuelFinished {
   returnsAt: number
 }
 
+export interface DuelPlayerState {
+  avatarId: string
+  isGuide: boolean
+  pose: number
+  x: number
+  y: number
+  z: number
+  dirX: number
+  dirZ: number
+  hp: number
+  wins: number
+  invisible: boolean
+  dashReadyAt: number
+  highJumpReadyAt: number
+  ultimateReadyAt: number
+  ultimateId: UltimateSkillId
+  ultimateActiveUntil: number
+}
+
 let outgoingActionId = 0
 const nextOutgoingActionId = () => ++outgoingActionId
 const initialGraphicsQuality: GraphicsQuality = 'auto'
@@ -103,6 +123,12 @@ interface MuseumState {
   settingsOpen: boolean
   entranceDoorOpen: boolean
   score: number
+  skillShopNearby: boolean
+  skillShopOpen: boolean
+  ownedUltimateSkills: UltimateSkillId[]
+  equippedUltimateSkillId: UltimateSkillId
+  skillNotice: string | null
+  outgoingSkill: { id: number; type: 'skillPurchase' | 'skillEquip'; skillId: UltimateSkillId } | null
   quizRoomId: number | null
   quizCooldowns: Record<number, number>
   quizOpen: boolean
@@ -116,11 +142,11 @@ interface MuseumState {
   pvpOutgoingInvite: { targetPlayerId: string; name: string; expiresAt: number } | null
   pvpCooldownUntil: number
   outgoingPvp: { id: number; type: 'pvpRequest' | 'pvpResponse'; payload: Record<string, unknown> } | null
-  duel: { id: string; opponent: string; players: Record<string, { avatarId: string; isGuide: boolean; pose: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
+  duel: { id: string; opponent: string; players: Record<string, DuelPlayerState> } | null
   duelReturnPose: PlayerPose | null
   duelShot: DuelShot | null
   duelFinished: DuelFinished | null
-  outgoingDuel: { id: number; type: 'duelInput' | 'duelShoot' | 'duelForfeit'; payload: Record<string, number> } | null
+  outgoingDuel: { id: number; type: 'duelInput' | 'duelShoot' | 'duelAbility' | 'duelForfeit'; payload: Record<string, number> } | null
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
   beginJoining: () => void
@@ -150,6 +176,12 @@ interface MuseumState {
   setSettingsOpen: (open: boolean) => void
   setEntranceDoorOpen: (open: boolean) => void
   setScore: (score: number) => void
+  setSkillShopNearby: (nearby: boolean) => void
+  setSkillShopOpen: (open: boolean) => void
+  setSkillLoadout: (owned: UltimateSkillId[], equipped: UltimateSkillId, score: number, notice?: string) => void
+  setSkillNotice: (notice: string | null) => void
+  purchaseSkill: (skillId: UltimateSkillId) => void
+  equipSkill: (skillId: UltimateSkillId) => void
   setQuizRoomId: (roomId: number | null) => void
   setQuizOpen: (open: boolean) => void
   setQuizResult: (result: MuseumState['quizResult']) => void
@@ -169,7 +201,7 @@ interface MuseumState {
   setDuelFinished: (result: DuelFinished) => void
   endDuel: (returnPose?: PlayerPose) => void
   clearDuelReturnPose: () => void
-  sendDuel: (type: 'duelInput' | 'duelShoot' | 'duelForfeit', payload?: Record<string, number>) => void
+  sendDuel: (type: 'duelInput' | 'duelShoot' | 'duelAbility' | 'duelForfeit', payload?: Record<string, number>) => void
   forfeitDuel: () => void
   upsertRemotePlayers: (players: RemotePlayer[]) => void
   replaceRemotePlayers: (players: RemotePlayer[]) => void
@@ -205,6 +237,12 @@ export const useStore = create<MuseumState>((set) => ({
   settingsOpen: false,
   entranceDoorOpen: false,
   score: 0,
+  skillShopNearby: false,
+  skillShopOpen: false,
+  ownedUltimateSkills: [DEFAULT_ULTIMATE_SKILL],
+  equippedUltimateSkillId: DEFAULT_ULTIMATE_SKILL,
+  skillNotice: null,
+  outgoingSkill: null,
   quizRoomId: null,
   quizCooldowns: {},
   quizOpen: false,
@@ -273,6 +311,12 @@ export const useStore = create<MuseumState>((set) => ({
     duel: null,
     duelFinished: null,
     settingsOpen: false,
+    skillShopNearby: false,
+    skillShopOpen: false,
+    ownedUltimateSkills: [DEFAULT_ULTIMATE_SKILL],
+    equippedUltimateSkillId: DEFAULT_ULTIMATE_SKILL,
+    skillNotice: null,
+    outgoingSkill: null,
   }),
   setPlayerEmotePose: (playerEmotePose) => set({ playerEmotePose: Math.min(4, Math.max(0, playerEmotePose)) }),
   setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
@@ -280,6 +324,12 @@ export const useStore = create<MuseumState>((set) => ({
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
   setScore: (score) => set({ score }),
+  setSkillShopNearby: (skillShopNearby) => set((state) => state.skillShopNearby === skillShopNearby ? state : { skillShopNearby }),
+  setSkillShopOpen: (skillShopOpen) => set({ skillShopOpen, skillNotice: null }),
+  setSkillLoadout: (ownedUltimateSkills, equippedUltimateSkillId, score, skillNotice) => set({ ownedUltimateSkills, equippedUltimateSkillId, score, skillNotice: skillNotice ?? null }),
+  setSkillNotice: (skillNotice) => set({ skillNotice }),
+  purchaseSkill: (skillId) => set({ outgoingSkill: { id: nextOutgoingActionId(), type: 'skillPurchase', skillId }, skillNotice: null }),
+  equipSkill: (skillId) => set({ outgoingSkill: { id: nextOutgoingActionId(), type: 'skillEquip', skillId }, skillNotice: null }),
   setQuizRoomId: (quizRoomId) => set((state) => state.quizRoomId === quizRoomId ? state : { quizRoomId }),
   setQuizOpen: (quizOpen) => set((state) => ({ quizOpen, quizSession: quizOpen ? state.quizSession + 1 : state.quizSession, quizResult: quizOpen ? null : state.quizResult })),
   setQuizResult: (quizResult) => set({ quizResult }),
@@ -302,7 +352,7 @@ export const useStore = create<MuseumState>((set) => ({
   setPvpInvite: (pvpInvite) => set({ pvpInvite }),
   setPvpOutgoingInvite: (pvpOutgoingInvite) => set({ pvpOutgoingInvite }),
   setPvpCooldownUntil: (pvpCooldownUntil) => set({ pvpCooldownUntil }),
-  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, duelShot: null, duelFinished: null, seated: null, quizOpen: false, pvpInvite: null, pvpOutgoingInvite: null }),
+  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, duelShot: null, duelFinished: null, seated: null, quizOpen: false, skillShopOpen: false, skillShopNearby: false, pvpInvite: null, pvpOutgoingInvite: null }),
   setDuelSnapshot: (players) => set((state) => state.duel ? { duel: { ...state.duel, players } } : state),
   setDuelShot: (duelShot) => set({ duelShot }),
   setDuelFinished: (duelFinished) => set({ duelFinished }),

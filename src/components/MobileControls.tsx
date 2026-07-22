@@ -12,8 +12,10 @@ export function MobileControls() {
   const active = useStore((state) => state.activePoster)
   const entered = useStore((state) => state.entered)
   const duel = useStore((state) => state.duel)
+  const skillShopNearby = useStore((state) => state.skillShopNearby)
+  const skillShopOpen = useStore((state) => state.skillShopOpen)
 
-  if (!mobile || active || !entered || duel) return null
+  if (!mobile || active || !entered || duel || skillShopOpen) return null
   const stopMove = () => { start.current = null; setMove({ x: 0, z: 0 }) }
   const stopLook = () => { lookStart.current = null; setLook({ x: 0, y: 0 }) }
 
@@ -36,6 +38,8 @@ export function MobileControls() {
       }}
       onPointerUp={stopLook} onPointerCancel={stopLook}><span>VUỐT ĐỂ NHÌN</span>
     </div>
-    {focused && <button className="mobile-interact" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }))}>Xem hiện vật</button>}
+    {skillShopNearby
+      ? <button className="mobile-interact" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }))}>Kho kỹ năng</button>
+      : focused && <button className="mobile-interact" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }))}>Xem hiện vật</button>}
   </div>
 }

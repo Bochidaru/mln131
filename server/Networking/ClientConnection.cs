@@ -11,6 +11,8 @@ public sealed class ClientConnection(string id, WebSocket socket)
     public string BaseName { get; set; } = "Khách tham quan";
     public WebSocket Socket { get; } = socket;
     public SemaphoreSlim SendLock { get; } = new(1, 1);
+    public HashSet<string> OwnedUltimateSkills { get; } = new(StringComparer.Ordinal) { UltimateSkillCatalog.DefaultSkillId };
+    public string EquippedUltimateSkill { get; set; } = UltimateSkillCatalog.DefaultSkillId;
 
     // State hiện tại của player
     public PlayerState State { get; } = new() { PlayerId = id };

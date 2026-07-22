@@ -10,6 +10,7 @@ export function PvpPanel() {
   const cooldownUntil = useStore((state) => state.pvpCooldownUntil)
   const score = useStore((state) => state.score)
   const duel = useStore((state) => state.duel)
+  const skillShopNearby = useStore((state) => state.skillShopNearby)
   const request = useStore((state) => state.requestPvp)
   const respond = useStore((state) => state.respondPvp)
   const setInvite = useStore((state) => state.setPvpInvite)
@@ -49,6 +50,7 @@ export function PvpPanel() {
   if (duel) return null
   if (invite && inviteSeconds > 0) return <div className="pvp-invite"><strong>{invite.name} thách đấu bạn</strong><span>Chạm 3 · phần thưởng tối đa 5 điểm · còn {inviteSeconds}s</span><button onClick={() => respond(invite.fromPlayerId, true)}>Đồng ý</button><button onClick={() => respond(invite.fromPlayerId, false)}>Từ chối</button></div>
   if (outgoingInvite && outgoingSeconds > 0) return <div className="pvp-invite pvp-invite-sent"><strong>Đã gửi lời mời thách đấu</strong><span>Đang chờ {outgoingInvite.name} phản hồi · còn {outgoingSeconds}s</span></div>
+  if (skillShopNearby) return null
   if (!target) return null
   if (!hasEnoughPoints) return <div className="pvp-near"><span>{pointsMessage}</span></div>
   return <div className="pvp-near"><span><kbd>E</kbd> Thách đấu {target.name}</span><button disabled={cooldownSeconds > 0} onClick={() => request(target.id, target.name)}>{cooldownSeconds > 0 ? `Chờ ${cooldownSeconds}s` : 'PvP'}</button></div>

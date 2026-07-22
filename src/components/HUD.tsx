@@ -34,6 +34,8 @@ export function HUD() {
   const setSettingsOpen = useStore((state) => state.setSettingsOpen)
   const toggleAudio = useStore((state) => state.toggleAudio)
   const score = useStore((state) => state.score)
+  const skillShopNearby = useStore((state) => state.skillShopNearby)
+  const skillShopOpen = useStore((state) => state.skillShopOpen)
   const quizRoomId = useStore((state) => state.quizRoomId)
   const quizCooldowns = useStore((state) => state.quizCooldowns)
   const duel = useStore((state) => state.duel)
@@ -75,11 +77,12 @@ export function HUD() {
     </aside>
 
     <div className={`crosshair ${focused || focusedSeat || seated ? 'is-focused' : ''}`} aria-hidden="true"><i /></div>
-    {focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}
-    {seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
-    {!seated && !focused && focusedSeat && quizRoomId === null && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
-    {!seated && !focused && focusedSeat && quizRoomId !== null && cooldownSeconds > 0 && <p className="interaction-hint">Quiz sẵn sàng sau <kbd>{cooldownLabel}</kbd></p>}
-    {!seated && !focused && focusedSeat && quizRoomId !== null && cooldownSeconds === 0 && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống và làm quiz</p>}
+    {skillShopNearby && !skillShopOpen && <p className="interaction-hint skill-shop-hint"><kbd>E</kbd> Mở kho kỹ năng duel</p>}
+    {!skillShopNearby && focused && <p className="interaction-hint"><kbd>E</kbd>{uiText.view.replace('Nhấn E hoặc ', '')}</p>}
+    {!skillShopNearby && seated && <p className="interaction-hint"><kbd>E</kbd> Đứng dậy</p>}
+    {!skillShopNearby && !seated && !focused && focusedSeat && quizRoomId === null && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống</p>}
+    {!skillShopNearby && !seated && !focused && focusedSeat && quizRoomId !== null && cooldownSeconds > 0 && <p className="interaction-hint">Quiz sẵn sàng sau <kbd>{cooldownLabel}</kbd></p>}
+    {!skillShopNearby && !seated && !focused && focusedSeat && quizRoomId !== null && cooldownSeconds === 0 && <p className="interaction-hint"><kbd>E</kbd> Ngồi xuống và làm quiz</p>}
 
     {!mobile && !locked && <div className="lock-hint">
       <span className="mouse-icon" aria-hidden="true" />

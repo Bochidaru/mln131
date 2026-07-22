@@ -10,6 +10,9 @@ namespace server.Networking;
 public sealed class GameRoom
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const float SkillShopX = 0f;
+    private const float SkillShopZ = -3.15f;
+    private const float SkillShopRange = 3.2f;
     public string Id { get; }
     private readonly ConcurrentDictionary<string, ClientConnection> _players = new();
     private readonly object _playerGate = new();
@@ -94,6 +97,8 @@ public sealed class GameRoom
             online = PlayerCount,
             score = playerConnection.State.Score,
             isGuide = playerConnection.State.IsGuide,
+            ownedSkills = playerConnection.OwnedUltimateSkills.Order().ToArray(),
+            equippedSkillId = playerConnection.EquippedUltimateSkill,
             players = CreateSnapshot().Players
         }), cancellationToken);
 
@@ -350,6 +355,14 @@ public sealed class GameRoom
             {
                 AwardQuiz(connection, quizPayload);
             }
+            else if (message?.Type == "skillPurchase" && message.Payload is JsonElement purchasePayload)
+            {
+                PurchaseSkill(connection, purchasePayload);
+            }
+            else if (message?.Type == "skillEquip" && message.Payload is JsonElement equipPayload)
+            {
+                EquipSkill(connection, equipPayload);
+            }
             else if (message?.Type == "pvpRequest" && message.Payload is JsonElement requestPayload && requestPayload.TryGetProperty("targetPlayerId", out var targetElement))
             {
                 if (targetElement.GetString() is { } targetId && _players.TryGetValue(targetId, out var target)) _duels.Request(connection, target);
@@ -372,6 +385,15 @@ public sealed class GameRoom
                     && shootPayload.TryGetProperty("dirZ", out var dirZElement) && dirZElement.TryGetSingle(out var dirZ))
                 {
                     _duels.Shoot(connection.Id, dirX, dirZ);
+                }
+            }
+            else if (message?.Type == "duelAbility" && message.Payload is JsonElement abilityPayload)
+            {
+                if (abilityPayload.TryGetProperty("slot", out var slotElement) && slotElement.TryGetInt32(out var slot)
+                    && abilityPayload.TryGetProperty("dirX", out var dirXElement) && dirXElement.TryGetSingle(out var dirX)
+                    && abilityPayload.TryGetProperty("dirZ", out var dirZElement) && dirZElement.TryGetSingle(out var dirZ))
+                {
+                    _duels.UseAbility(connection.Id, slot, dirX, dirZ);
                 }
             }
             else if (message?.Type == "duelForfeit")
@@ -433,6 +455,80 @@ public sealed class GameRoom
             text
         }), exceptPlayerId: null, CancellationToken.None);
     }
+
+    private void PurchaseSkill(ClientConnection connection, JsonElement payload)
+    {
+        if (!TryReadSkillAtShop(connection, payload, out var skillId)) return;
+        if (!UltimateSkillCatalog.IsPurchasable(skillId))
+        {
+            SendSkillError(connection, "Kỹ năng này không thể mua.");
+            return;
+        }
+        if (connection.OwnedUltimateSkills.Contains(skillId))
+        {
+            EquipSkill(connection, skillId, "Đã trang bị kỹ năng.");
+            return;
+        }
+        if (connection.State.Score < UltimateSkillCatalog.SkillPrice)
+        {
+            SendSkillError(connection, $"Bạn cần {UltimateSkillCatalog.SkillPrice} điểm để mua kỹ năng này.");
+            return;
+        }
+
+        connection.State.Score -= UltimateSkillCatalog.SkillPrice;
+        connection.OwnedUltimateSkills.Add(skillId);
+        EquipSkill(connection, skillId, $"Mua thành công với {UltimateSkillCatalog.SkillPrice} điểm và đã trang bị.");
+        _ = BroadcastMessageAsync(new ServerMessage("playerUpdated", connection.Id, new { player = connection.State }), connection.Id, CancellationToken.None);
+    }
+
+    private void EquipSkill(ClientConnection connection, JsonElement payload)
+    {
+        if (!TryReadSkillAtShop(connection, payload, out var skillId)) return;
+        if (!connection.OwnedUltimateSkills.Contains(skillId))
+        {
+            SendSkillError(connection, "Bạn chưa sở hữu kỹ năng này.");
+            return;
+        }
+        EquipSkill(connection, skillId, "Đã đổi kỹ năng ultimate.");
+    }
+
+    private static bool TryReadSkillAtShop(ClientConnection connection, JsonElement payload, out string skillId)
+    {
+        skillId = string.Empty;
+        var dx = connection.State.X - SkillShopX;
+        var dz = connection.State.Z - SkillShopZ;
+        if (connection.State.Area != "lobby" || dx * dx + dz * dz > SkillShopRange * SkillShopRange)
+        {
+            SendSkillError(connection, "Hãy đứng gần trụ kỹ năng ở sảnh chính.");
+            return false;
+        }
+        if (!payload.TryGetProperty("skillId", out var skillElement) || skillElement.ValueKind != JsonValueKind.String
+            || skillElement.GetString() is not { } requestedSkill || !UltimateSkillCatalog.AllSkillIds.Contains(requestedSkill))
+        {
+            SendSkillError(connection, "Kỹ năng không hợp lệ.");
+            return false;
+        }
+        skillId = requestedSkill;
+        return true;
+    }
+
+    private static void EquipSkill(ClientConnection connection, string skillId, string notice)
+    {
+        connection.EquippedUltimateSkill = skillId;
+        SendSkillLoadout(connection, notice);
+    }
+
+    private static void SendSkillLoadout(ClientConnection connection, string notice) =>
+        _ = connection.SendAsync("skillLoadout", new
+        {
+            ownedSkills = connection.OwnedUltimateSkills.Order().ToArray(),
+            equippedSkillId = connection.EquippedUltimateSkill,
+            score = connection.State.Score,
+            notice,
+        }, CancellationToken.None);
+
+    private static void SendSkillError(ClientConnection connection, string reason) =>
+        _ = connection.SendAsync("skillError", new { reason }, CancellationToken.None);
 
     private void AwardQuiz(ClientConnection connection, JsonElement payload)
     {

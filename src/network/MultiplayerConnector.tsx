@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { DEFAULT_ULTIMATE_SKILL, ultimateSkills, type UltimateSkillId } from '../data/skills'
 import { useStore, type RemotePlayer } from '../store/useStore'
 
 type ServerPlayer = {
@@ -30,6 +31,9 @@ type ServerMessage = {
     tickRate?: number
     online?: number
     isGuide?: boolean
+    ownedSkills?: string[]
+    equippedSkillId?: string
+    notice?: string
     players?: ServerPlayer[]
     player?: ServerPlayer
     reason?: string
@@ -54,7 +58,7 @@ type ServerMessage = {
     aborted?: boolean
     returnsAt?: string
     returnPose?: { x: number; z: number; dirX: number; dirZ: number }
-    duelPlayers?: { playerId: string; avatarId?: string; isGuide?: boolean; pose?: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
+    duelPlayers?: { playerId: string; avatarId?: string; isGuide?: boolean; pose?: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number; invisible?: boolean; dashReadyAt?: number; highJumpReadyAt?: number; ultimateReadyAt?: number; ultimateId?: string; ultimateActiveUntil?: number }[]
     shotId?: string
     shooterId?: string
     startX?: number
@@ -75,6 +79,11 @@ type ServerMessage = {
 const NETWORK_TICK_RATE = 32
 const SEND_INTERVAL_MS = 1000 / NETWORK_TICK_RATE
 const RECONNECT_DELAY_MS = 1200
+const validUltimateSkillIds = new Set(ultimateSkills.map((skill) => skill.id))
+
+function toUltimateSkillId(value?: string): UltimateSkillId {
+  return value && validUltimateSkillIds.has(value as UltimateSkillId) ? value as UltimateSkillId : DEFAULT_ULTIMATE_SKILL
+}
 
 function getWebSocketUrl() {
   const configured = import.meta.env.VITE_MULTIPLAYER_URL
@@ -184,6 +193,14 @@ export function MultiplayerConnector() {
       lastPvpId = action.id
       socket.send(JSON.stringify({ type: action.type, payload: action.payload }))
     })
+    let lastSkillId = 0
+    const unsubscribeFromSkill = useStore.subscribe((state) => {
+      const action = state.outgoingSkill
+      const socket = socketRef.current
+      if (!action || action.id === lastSkillId || !socket || socket.readyState !== WebSocket.OPEN) return
+      lastSkillId = action.id
+      socket.send(JSON.stringify({ type: action.type, payload: { skillId: action.skillId } }))
+    })
     let lastDuelId = 0
     const unsubscribeFromDuel = useStore.subscribe((state) => {
       const action = state.outgoingDuel
@@ -208,6 +225,11 @@ export function MultiplayerConnector() {
         store.setMultiplayerConnected(true)
         store.setScore(message.payload?.score ?? 0)
         store.setIsGuide(Boolean(message.payload?.isGuide))
+        store.setSkillLoadout(
+          (message.payload?.ownedSkills ?? [DEFAULT_ULTIMATE_SKILL]).map((skill) => toUltimateSkillId(skill)),
+          toUltimateSkillId(message.payload?.equippedSkillId),
+          message.payload?.score ?? 0,
+        )
         if (message.payload?.players) store.upsertRemotePlayers(message.payload.players.map(toRemotePlayer))
         store.enter()
         if (sendTimerRef.current !== null) window.clearInterval(sendTimerRef.current)
@@ -247,6 +269,21 @@ export function MultiplayerConnector() {
 
       if (message.type === 'adminAward' && message.payload?.score !== undefined) {
         store.setScore(message.payload.score)
+        return
+      }
+
+      if (message.type === 'skillLoadout' && message.payload?.ownedSkills && message.payload.equippedSkillId && message.payload.score !== undefined) {
+        store.setSkillLoadout(
+          message.payload.ownedSkills.map((skill) => toUltimateSkillId(skill)),
+          toUltimateSkillId(message.payload.equippedSkillId),
+          message.payload.score,
+          message.payload.notice,
+        )
+        return
+      }
+
+      if (message.type === 'skillError') {
+        store.setSkillNotice(message.payload?.reason ?? 'Không thể thực hiện thao tác kỹ năng.')
         return
       }
 
@@ -305,7 +342,18 @@ export function MultiplayerConnector() {
         if (message.payload?.targetPlayerId && store.pvpOutgoingInvite?.targetPlayerId === message.payload.targetPlayerId) store.setPvpOutgoingInvite(null)
       }
       if (message.type === 'duelStart' && message.payload?.duelId && message.payload.opponent) store.startDuel(message.payload.duelId, message.payload.opponent)
-      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, { ...player, avatarId: player.avatarId ?? 'block-explorer', isGuide: Boolean(player.isGuide), pose: player.pose ?? 0 }])))
+      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, {
+        ...player,
+        avatarId: player.avatarId ?? 'block-explorer',
+        isGuide: Boolean(player.isGuide),
+        pose: player.pose ?? 0,
+        invisible: Boolean(player.invisible),
+        dashReadyAt: player.dashReadyAt ?? 0,
+        highJumpReadyAt: player.highJumpReadyAt ?? 0,
+        ultimateReadyAt: player.ultimateReadyAt ?? 0,
+        ultimateId: toUltimateSkillId(player.ultimateId),
+        ultimateActiveUntil: player.ultimateActiveUntil ?? 0,
+      }])))
       if (message.type === 'duelShot' && message.payload?.shotId && message.payload.shooterId
         && message.payload.startX !== undefined && message.payload.startY !== undefined && message.payload.startZ !== undefined
         && message.payload.endX !== undefined && message.payload.endY !== undefined && message.payload.endZ !== undefined) {
@@ -376,6 +424,7 @@ export function MultiplayerConnector() {
       unsubscribeFromChat()
       unsubscribeFromQuiz()
       unsubscribeFromPvp()
+      unsubscribeFromSkill()
       unsubscribeFromDuel()
       socketRef.current?.close()
       socketRef.current = null

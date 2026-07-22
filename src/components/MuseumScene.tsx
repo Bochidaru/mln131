@@ -18,6 +18,7 @@ import { MuseumInterior } from './MuseumInterior'
 import { Player } from './Player'
 import { PoseIndicator } from './PoseIndicator'
 import { RemotePlayers } from './RemotePlayers'
+import { SkillShop } from './SkillShop'
 import { Surroundings } from './Surroundings'
 import { MultiplayerConnector } from '../network/MultiplayerConnector'
 import { useStore } from '../store/useStore'
@@ -89,6 +90,7 @@ export function MuseumScene() {
     <PoseIndicator />
     <ChatPanel />
     <QuizPanel />
+    <SkillShop />
     <PvpPanel />
     <DuelHud />
     <Minimap />

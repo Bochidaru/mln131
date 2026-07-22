@@ -21,6 +21,9 @@ const jumpSpeed = 5
 const gravity = 14
 
 const SEAT_RANGE_SQ = 2.2 * 2.2
+const SKILL_SHOP_X = 0
+const SKILL_SHOP_Z = -3.15
+const SKILL_SHOP_RANGE_SQ = 2.8 * 2.8
 
 const deepLinks: Record<string, { position: [number, number, number]; target: [number, number, number] }> = {
   entrance: { position: [0, 1.68, 9.02], target: [0, 2, -4] },
@@ -46,6 +49,7 @@ export function Player() {
   const mobile = useIsMobile()
   const entered = useStore((state) => state.entered)
   const activePoster = useStore((state) => state.activePoster)
+  const skillShopOpen = useStore((state) => state.skillShopOpen)
   const mouseSensitivity = useStore((state) => state.mouseSensitivity)
   const setControlsLocked = useStore((state) => state.setControlsLocked)
 
@@ -58,10 +62,14 @@ export function Player() {
     const down = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
       if (target?.matches('input, textarea, select, [contenteditable="true"]')) return
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyQ', 'Space'].includes(event.code)) event.preventDefault()
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyE', 'KeyQ', 'KeyR', 'Space'].includes(event.code)) event.preventDefault()
 
       const store = useStore.getState()
-      if (event.code === 'KeyQ' && !event.repeat && store.entered && !store.activePoster) {
+      if (!event.repeat && store.duel && !store.duelFinished && ['KeyE', 'KeyQ', 'KeyR'].includes(event.code)) {
+        camera.getWorldDirection(forward)
+        const slot = event.code === 'KeyE' ? 0 : event.code === 'KeyQ' ? 1 : 2
+        store.sendDuel('duelAbility', { slot, dirX: forward.x, dirZ: forward.z })
+      } else if (event.code === 'KeyQ' && !event.repeat && store.entered && !store.activePoster && !store.skillShopOpen) {
         if (controls.current?.isLocked) controls.current.unlock()
         else controls.current?.lock()
       }
@@ -102,6 +110,17 @@ export function Player() {
       if (event.code !== 'KeyE' && event.code !== 'Enter') return
       const store = useStore.getState()
       if (!store.entered || store.activePoster) return
+      if (store.duel) return
+      if (store.skillShopOpen) {
+        store.setSkillShopOpen(false)
+        return
+      }
+      if (store.skillShopNearby) {
+        controls.current?.unlock()
+        store.setSkillShopOpen(true)
+        museumAudio.click()
+        return
+      }
       if (store.seated) {
         const back = seatReturn.current ?? [camera.position.x, 1.68, camera.position.z]
         camera.position.set(back[0], back[1], back[2])
@@ -146,6 +165,10 @@ export function Player() {
     const cappedDelta = Math.min(delta, 0.05)
     const frameCamera = state.camera
 
+    const shopDx = frameCamera.position.x - SKILL_SHOP_X
+    const shopDz = frameCamera.position.z - SKILL_SHOP_Z
+    store.setSkillShopNearby(!store.duel && store.currentArea === 'lobby' && shopDx * shopDx + shopDz * shopDz <= SKILL_SHOP_RANGE_SQ)
+
     if (store.duelReturnPose) {
       const pose = store.duelReturnPose
       frameCamera.position.set(pose.x, eyeHeight, pose.z)
@@ -184,7 +207,7 @@ export function Player() {
       return
     }
 
-    if (!entered || activePoster || store.quizOpen) {
+    if (!entered || activePoster || store.quizOpen || store.skillShopOpen) {
       if (activePoster && jumping.current) {
         frameCamera.position.y = eyeHeight
         verticalVelocity.current = 0
@@ -284,5 +307,5 @@ export function Player() {
   })
 
   if (mobile || !entered) return null
-  return <PointerLockControls ref={controls} pointerSpeed={mouseSensitivity} selector={activePoster ? '#pointer-lock-disabled' : '#museum-canvas'} makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => setControlsLocked(false)} />
+  return <PointerLockControls ref={controls} pointerSpeed={mouseSensitivity} selector={activePoster || skillShopOpen ? '#pointer-lock-disabled' : '#museum-canvas'} makeDefault onLock={() => setControlsLocked(true)} onUnlock={() => setControlsLocked(false)} />
 }

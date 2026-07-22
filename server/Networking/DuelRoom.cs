@@ -18,8 +18,13 @@ public sealed class DuelRoom
     private const float SprintMoveSpeed = 7f;
     private const float EyeHeight = 1.68f;
     private const float JumpSpeed = 5f;
+    private const float HighJumpSpeed = 8.5f;
     private const float Gravity = 14f;
     private const float PlayerRadius = 0.55f;
+    private const float DashDistance = 6f;
+    private const float BlinkDistance = 10f;
+    private static readonly TimeSpan BasicCooldown = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan UltimateCooldown = TimeSpan.FromSeconds(30);
     private readonly ClientConnection _first;
     private readonly ClientConnection _second;
     private readonly Dictionary<string, SavedPose> _returnPoses;
@@ -29,6 +34,9 @@ public sealed class DuelRoom
     private readonly Dictionary<string, DateTimeOffset> _lastShot = new();
     private readonly Dictionary<string, float> _verticalVelocity = new();
     private readonly Dictionary<string, bool> _jumpHeld = new();
+    private readonly Dictionary<string, AbilityState> _abilities = new();
+    private readonly Dictionary<string, Queue<PositionSample>> _positionHistory = new();
+    private readonly object _abilityGate = new();
     private readonly Action<DuelRoom> _finished;
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
@@ -64,6 +72,8 @@ public sealed class DuelRoom
         _wins[first.Id] = _wins[second.Id] = 0;
         _verticalVelocity[first.Id] = _verticalVelocity[second.Id] = 0;
         _jumpHeld[first.Id] = _jumpHeld[second.Id] = false;
+        _abilities[first.Id] = new(); _abilities[second.Id] = new();
+        _positionHistory[first.Id] = new(); _positionHistory[second.Id] = new();
         SpawnRound();
     }
 
@@ -80,6 +90,11 @@ public sealed class DuelRoom
         _lastShot[playerId] = DateTimeOffset.UtcNow;
         var shooter = playerId == _first.Id ? _first : _second;
         var target = playerId == _first.Id ? _second : _first;
+        lock (_abilityGate)
+        {
+            var ability = _abilities[playerId];
+            if (ability.ActiveSkillId == "veil") ability.ActiveUntil = DateTimeOffset.MinValue;
+        }
         var direction = new Vector2(dirX, dirZ);
         if (direction.LengthSquared() < 0.01f) return;
         direction = Vector2.Normalize(direction);
@@ -112,6 +127,48 @@ public sealed class DuelRoom
         if (_health[target.Id] == 0) EndRound(shooter.Id);
     }
 
+    public void UseAbility(string playerId, int slot, float dirX, float dirZ)
+    {
+        if (Volatile.Read(ref _hasFinished) != 0 || !Contains(playerId) || slot is < 0 or > 2) return;
+        var player = playerId == _first.Id ? _first : _second;
+        var now = DateTimeOffset.UtcNow;
+        var direction = new Vector2(dirX, dirZ);
+        if (direction.LengthSquared() < 0.01f) direction = new Vector2(player.State.DirX, player.State.DirZ);
+        if (direction.LengthSquared() < 0.01f) direction = Vector2.UnitY;
+        direction = Vector2.Normalize(direction);
+
+        lock (_abilityGate)
+        {
+            var ability = _abilities[playerId];
+            if (slot == 0)
+            {
+                if (ability.DashReadyAt > now || !MoveAlongDirection(player, direction, DashDistance)) return;
+                ability.DashReadyAt = now.Add(BasicCooldown);
+            }
+            else if (slot == 1)
+            {
+                if (ability.HighJumpReadyAt > now || player.State.Y > EyeHeight + 0.001f) return;
+                _verticalVelocity[playerId] = HighJumpSpeed;
+                ability.HighJumpReadyAt = now.Add(BasicCooldown);
+            }
+            else
+            {
+                if (ability.UltimateReadyAt > now || !ActivateUltimate(player, ability, direction, now)) return;
+                ability.UltimateReadyAt = now.Add(UltimateCooldown);
+            }
+        }
+
+        _ = BroadcastAbilityAsync(new
+        {
+            playerId,
+            slot,
+            skillId = slot == 2 ? player.EquippedUltimateSkill : slot == 0 ? "dash" : "high-jump",
+            x = player.State.X,
+            y = player.State.Y,
+            z = player.State.Z,
+        });
+    }
+
     public void Abort(string leaverId)
     {
         var winner = leaverId == _first.Id ? _second : _first;
@@ -141,12 +198,24 @@ public sealed class DuelRoom
 
     private void Tick(float delta)
     {
+        var now = DateTimeOffset.UtcNow;
         foreach (var player in new[] { _first, _second })
         {
-            if (!_inputs.TryGetValue(player.Id, out var input)) continue;
+            _inputs.TryGetValue(player.Id, out var input);
             var movement = new Vector2(Math.Clamp(input.MoveX, -1, 1), Math.Clamp(input.MoveZ, -1, 1));
             if (movement.LengthSquared() > 1) movement = Vector2.Normalize(movement);
             var speed = input.Sprinting ? SprintMoveSpeed : MoveSpeed;
+            var gravity = Gravity;
+            lock (_abilityGate)
+            {
+                var ability = _abilities[player.Id];
+                if (ability.ActiveUntil > now)
+                {
+                    if (ability.ActiveSkillId == UltimateSkillCatalog.DefaultSkillId) speed *= 1.25f;
+                    else if (ability.ActiveSkillId == "overdrive") speed *= 1.6f;
+                    else if (ability.ActiveSkillId == "feather") gravity *= 0.45f;
+                }
+            }
             var nextX = Math.Clamp(player.State.X + movement.X * speed * delta, ArenaX - ArenaLimit, ArenaX + ArenaLimit);
             var nextZ = Math.Clamp(player.State.Z + movement.Y * speed * delta, ArenaZ - ArenaLimit, ArenaZ + ArenaLimit);
             if (!HitsCover(nextX, nextZ))
@@ -160,7 +229,7 @@ public sealed class DuelRoom
                 _verticalVelocity[player.Id] = JumpSpeed;
             }
             _jumpHeld[player.Id] = input.Jump;
-            _verticalVelocity[player.Id] -= Gravity * delta;
+            _verticalVelocity[player.Id] -= gravity * delta;
             player.State.Y += _verticalVelocity[player.Id] * delta;
             if (player.State.Y <= EyeHeight)
             {
@@ -169,6 +238,7 @@ public sealed class DuelRoom
             }
             player.State.DirX = input.DirX; player.State.DirZ = input.DirZ; player.State.Area = "duel";
             player.State.Pose = input.Pose;
+            RecordPosition(player, now);
         }
     }
 
@@ -187,20 +257,32 @@ public sealed class DuelRoom
         _verticalVelocity[_first.Id] = _verticalVelocity[_second.Id] = 0;
         _jumpHeld[_first.Id] = _jumpHeld[_second.Id] = false;
         _health[_first.Id] = _health[_second.Id] = 100;
+        lock (_abilityGate)
+        {
+            foreach (var player in new[] { _first, _second })
+            {
+                _abilities[player.Id].ActiveSkillId = null;
+                _abilities[player.Id].ActiveUntil = DateTimeOffset.MinValue;
+                _positionHistory[player.Id].Clear();
+                _positionHistory[player.Id].Enqueue(new(DateTimeOffset.UtcNow, player.State.X, player.State.Y, player.State.Z));
+            }
+        }
     }
 
     private async Task BroadcastAsync(CancellationToken token)
     {
-        var payload = new { duelId = Id, duelPlayers = new[] {
-            new { playerId = _first.Id, avatarId = _first.State.AvatarId, isGuide = _first.State.IsGuide, pose = _first.State.Pose, x = _first.State.X, y = _first.State.Y, z = _first.State.Z, dirX = _first.State.DirX, dirZ = _first.State.DirZ, hp = _health[_first.Id], wins = _wins[_first.Id] },
-            new { playerId = _second.Id, avatarId = _second.State.AvatarId, isGuide = _second.State.IsGuide, pose = _second.State.Pose, x = _second.State.X, y = _second.State.Y, z = _second.State.Z, dirX = _second.State.DirX, dirZ = _second.State.DirZ, hp = _health[_second.Id], wins = _wins[_second.Id] },
-        }};
+        var now = DateTimeOffset.UtcNow;
+        var payload = new { duelId = Id, duelPlayers = new[] { CreatePlayerSnapshot(_first, now), CreatePlayerSnapshot(_second, now) } };
         await Task.WhenAll(_first.SendAsync("duelSnapshot", payload, token), _second.SendAsync("duelSnapshot", payload, token));
     }
 
     private Task BroadcastShotAsync(object payload) => Task.WhenAll(
         _first.SendAsync("duelShot", payload, CancellationToken.None),
         _second.SendAsync("duelShot", payload, CancellationToken.None));
+
+    private Task BroadcastAbilityAsync(object payload) => Task.WhenAll(
+        _first.SendAsync("duelAbility", payload, CancellationToken.None),
+        _second.SendAsync("duelAbility", payload, CancellationToken.None));
 
     private void Finish(string winnerId, bool aborted)
     {
@@ -313,6 +395,108 @@ public sealed class DuelRoom
         return maximum >= minimum;
     }
 
+    private bool ActivateUltimate(ClientConnection player, AbilityState ability, Vector2 direction, DateTimeOffset now)
+    {
+        var skillId = player.EquippedUltimateSkill;
+        if (!player.OwnedUltimateSkills.Contains(skillId)) return false;
+
+        ability.ActiveSkillId = skillId;
+        ability.ActiveUntil = skillId switch
+        {
+            UltimateSkillCatalog.DefaultSkillId => now.AddSeconds(4),
+            "veil" => now.AddSeconds(3),
+            "overdrive" => now.AddSeconds(5),
+            "feather" => now.AddSeconds(6),
+            _ => now,
+        };
+
+        if (skillId == "blink") return MoveAlongDirection(player, direction, BlinkDistance);
+        if (skillId == "rewind") return RewindPlayer(player, now);
+        return skillId is UltimateSkillCatalog.DefaultSkillId or "veil" or "overdrive" or "feather";
+    }
+
+    private static bool MoveAlongDirection(ClientConnection player, Vector2 direction, float distance)
+    {
+        var startX = player.State.X;
+        var startZ = player.State.Z;
+        var lastX = startX;
+        var lastZ = startZ;
+        const float step = 0.25f;
+        for (var travelled = step; travelled <= distance + 0.001f; travelled += step)
+        {
+            var nextX = Math.Clamp(startX + direction.X * travelled, ArenaX - ArenaLimit, ArenaX + ArenaLimit);
+            var nextZ = Math.Clamp(startZ + direction.Y * travelled, ArenaZ - ArenaLimit, ArenaZ + ArenaLimit);
+            if (HitsCover(nextX, nextZ)) break;
+            lastX = nextX;
+            lastZ = nextZ;
+            if (nextX is <= ArenaX - ArenaLimit or >= ArenaX + ArenaLimit
+                || nextZ is <= ArenaZ - ArenaLimit or >= ArenaZ + ArenaLimit) break;
+        }
+        if (Math.Abs(lastX - startX) < 0.05f && Math.Abs(lastZ - startZ) < 0.05f) return false;
+        player.State.X = lastX;
+        player.State.Z = lastZ;
+        return true;
+    }
+
+    private bool RewindPlayer(ClientConnection player, DateTimeOffset now)
+    {
+        var history = _positionHistory[player.Id];
+        if (history.Count == 0) return false;
+        var targetTime = now.AddSeconds(-3);
+        var selected = history.Peek();
+        foreach (var sample in history)
+        {
+            if (sample.Timestamp > targetTime) break;
+            selected = sample;
+        }
+        if (HitsCover(selected.X, selected.Z)) return false;
+        player.State.X = selected.X;
+        player.State.Y = Math.Max(EyeHeight, selected.Y);
+        player.State.Z = selected.Z;
+        _verticalVelocity[player.Id] = 0;
+        return true;
+    }
+
+    private void RecordPosition(ClientConnection player, DateTimeOffset now)
+    {
+        lock (_abilityGate)
+        {
+            var history = _positionHistory[player.Id];
+            history.Enqueue(new(now, player.State.X, player.State.Y, player.State.Z));
+            var cutoff = now.AddSeconds(-3.25);
+            while (history.Count > 1 && history.Peek().Timestamp < cutoff) history.Dequeue();
+        }
+    }
+
+    private DuelPlayerSnapshot CreatePlayerSnapshot(ClientConnection player, DateTimeOffset now)
+    {
+        lock (_abilityGate)
+        {
+            var ability = _abilities[player.Id];
+            return new(
+                player.Id,
+                player.State.AvatarId,
+                player.State.IsGuide,
+                player.State.Pose,
+                player.State.X,
+                player.State.Y,
+                player.State.Z,
+                player.State.DirX,
+                player.State.DirZ,
+                _health[player.Id],
+                _wins[player.Id],
+                ability.ActiveSkillId == "veil" && ability.ActiveUntil > now,
+                ToUnixMilliseconds(ability.DashReadyAt),
+                ToUnixMilliseconds(ability.HighJumpReadyAt),
+                ToUnixMilliseconds(ability.UltimateReadyAt),
+                player.EquippedUltimateSkill,
+                ability.ActiveUntil > now ? ToUnixMilliseconds(ability.ActiveUntil) : 0);
+        }
+    }
+
+    private static long ToUnixMilliseconds(DateTimeOffset value) =>
+        value == DateTimeOffset.MinValue ? 0 : value.ToUnixTimeMilliseconds();
+
     private void Restore(ClientConnection player)
     {
         var saved = _returnPoses[player.Id];
@@ -320,6 +504,33 @@ public sealed class DuelRoom
     }
 
     public readonly record struct DuelInput(float MoveX, float MoveZ, float DirX, float DirZ, bool Sprinting, bool Jump, int Pose);
+    private sealed class AbilityState
+    {
+        public DateTimeOffset DashReadyAt { get; set; } = DateTimeOffset.MinValue;
+        public DateTimeOffset HighJumpReadyAt { get; set; } = DateTimeOffset.MinValue;
+        public DateTimeOffset UltimateReadyAt { get; set; } = DateTimeOffset.MinValue;
+        public string? ActiveSkillId { get; set; }
+        public DateTimeOffset ActiveUntil { get; set; } = DateTimeOffset.MinValue;
+    }
+    private readonly record struct PositionSample(DateTimeOffset Timestamp, float X, float Y, float Z);
+    private sealed record DuelPlayerSnapshot(
+        string PlayerId,
+        string AvatarId,
+        bool IsGuide,
+        int Pose,
+        float X,
+        float Y,
+        float Z,
+        float DirX,
+        float DirZ,
+        int Hp,
+        int Wins,
+        bool Invisible,
+        long DashReadyAt,
+        long HighJumpReadyAt,
+        long UltimateReadyAt,
+        string UltimateId,
+        long UltimateActiveUntil);
     private readonly record struct SavedPose(float X, float Y, float Z, float DirX, float DirZ, string Area)
     { public SavedPose(PlayerState state) : this(state.X, state.Y, state.Z, state.DirX, state.DirZ, state.Area) { } }
 }
