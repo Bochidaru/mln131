@@ -82,9 +82,10 @@ function RemoteCrowd({ players }: { players: RemotePlayer[] }) {
 
   useFrame(({ clock }) => {
     if (!bodies.current || !heads.current || !players.some((player) => player.isGuide)) return
+    const pulse = 0.5 + Math.sin(clock.elapsedTime * 5.5) * 0.5
     players.forEach((player, index) => {
       if (!player.isGuide) return
-      rainbow.setHSL((clock.elapsedTime * 0.17 + index * 0.08) % 1, 0.9, 0.58)
+      rainbow.setHSL((clock.elapsedTime * 0.28 + index * 0.08) % 1, 1, 0.48 + pulse * 0.18)
       bodies.current!.setColorAt(index, rainbow)
       heads.current!.setColorAt(index, rainbow)
     })

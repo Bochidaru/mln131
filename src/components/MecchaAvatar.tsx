@@ -15,7 +15,14 @@ const modelUrls = [
 // All source poses use the same character scale; crouched poses stay naturally shorter.
 const poseHeights = [1.72, 1.72, 1.4, 1.72, 1] as const
 
-type ColorMaterial = Material & { color?: Color }
+type ColorMaterial = Material & {
+  color?: Color
+  emissive?: Color
+  emissiveIntensity?: number
+  toneMapped?: boolean
+}
+
+const rainbowColor = new Color()
 
 function cloneMaterial(material: Material, color: string) {
   const cloned = material.clone() as Material & { color?: Color }
@@ -45,7 +52,10 @@ export function MecchaAvatar({ avatarId, guide = false, pose = 0 }: { avatarId: 
       node.receiveShadow = false
       const cloneOne = (material: Material) => {
         const cloned = cloneMaterial(material, avatar.suit)
-        if (guide && cloned.color) rainbowMaterials.push(cloned)
+        if (guide && cloned.color) {
+          cloned.toneMapped = false
+          rainbowMaterials.push(cloned)
+        }
         return cloned
       }
       node.material = Array.isArray(node.material)
@@ -68,8 +78,16 @@ export function MecchaAvatar({ avatarId, guide = false, pose = 0 }: { avatarId: 
   useEffect(() => () => disposeClone(prepared.model), [prepared])
   useFrame(({ clock }) => {
     if (!guide) return
-    const hue = (clock.elapsedTime * 0.17) % 1
-    prepared.rainbowMaterials.forEach((material, index) => material.color?.setHSL((hue + index * 0.08) % 1, 0.9, 0.58))
+    const hue = (clock.elapsedTime * 0.28) % 1
+    const pulse = 0.5 + Math.sin(clock.elapsedTime * 5.5) * 0.5
+    prepared.rainbowMaterials.forEach((material, index) => {
+      rainbowColor.setHSL((hue + index * 0.1) % 1, 1, 0.48 + pulse * 0.18)
+      material.color?.copy(rainbowColor)
+      if (material.emissive) {
+        material.emissive.copy(rainbowColor)
+        material.emissiveIntensity = 0.45 + pulse * 0.9
+      }
+    })
   })
 
   return <group position={prepared.position} scale={prepared.scale}>
