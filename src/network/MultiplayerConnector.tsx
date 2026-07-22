@@ -241,6 +241,7 @@ export function MultiplayerConnector() {
 
       if (message.type === 'guideStatus') {
         store.setIsGuide(Boolean(message.payload?.isGuide))
+        if (message.payload?.name) store.setPlayerName(message.payload.name)
         return
       }
 

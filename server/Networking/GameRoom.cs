@@ -68,12 +68,13 @@ public sealed class GameRoom
                 return false;
             }
 
-            if (_players.Values.Any(player => string.Equals(player.State.Name, name, StringComparison.OrdinalIgnoreCase)))
+            if (_players.Values.Any(player => string.Equals(player.BaseName, name, StringComparison.OrdinalIgnoreCase)))
             {
                 rejectionReason = "Tên này đã có người dùng trong bảo tàng. Hãy chọn tên khác.";
                 return false;
             }
 
+            playerConnection.BaseName = name;
             playerConnection.State.Name = name;
             playerConnection.State.AvatarId = avatarId;
             _players[playerConnection.Id] = playerConnection;
@@ -169,7 +170,8 @@ public sealed class GameRoom
         if (!_players.TryGetValue(playerId, out var player)) return false;
 
         player.State.IsGuide = isGuide;
-        await player.SendAsync("guideStatus", new { isGuide }, cancellationToken);
+        player.State.Name = isGuide ? $"{player.BaseName} - HDV" : player.BaseName;
+        await player.SendAsync("guideStatus", new { isGuide, name = player.State.Name }, cancellationToken);
         await BroadcastMessageAsync(new ServerMessage("playerUpdated", player.Id, new { player = player.State }), player.Id, cancellationToken);
         return true;
     }

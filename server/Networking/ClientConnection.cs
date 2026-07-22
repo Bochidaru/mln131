@@ -8,6 +8,7 @@ namespace server.Networking;
 public sealed class ClientConnection(string id, WebSocket socket)
 {
     public string Id { get; } = id;
+    public string BaseName { get; set; } = "Khách tham quan";
     public WebSocket Socket { get; } = socket;
     public SemaphoreSlim SendLock { get; } = new(1, 1);
 
