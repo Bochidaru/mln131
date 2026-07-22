@@ -31,11 +31,8 @@ function PostEffects() {
 }
 
 export function MuseumScene() {
-  // Keep the museum usable on integrated graphics and older laptops.
-  const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
   const graphicsQuality = useStore((state) => state.graphicsQuality)
-  const autoLowEnd = navigator.hardwareConcurrency <= 4 || (deviceMemory !== undefined && deviceMemory <= 4)
-  const lowEndDevice = graphicsQuality === 'low' || autoLowEnd
+  const lowEndDevice = graphicsQuality === 'low'
 
   return <main className="museum">
     <Canvas
