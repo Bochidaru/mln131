@@ -3,6 +3,7 @@ import { ultimateSkillById } from '../data/skills'
 import { useStore } from '../store/useStore'
 
 function cooldownLabel(readyAt: number, now: number) {
+  if (now === 0) return readyAt > 0 ? 'Đang hồi' : 'Sẵn sàng'
   const remaining = Math.max(0, readyAt - now)
   return remaining > 0 ? `${Math.ceil(remaining / 100) / 10}s` : 'Sẵn sàng'
 }

@@ -58,7 +58,7 @@ type ServerMessage = {
     aborted?: boolean
     returnsAt?: string
     returnPose?: { x: number; z: number; dirX: number; dirZ: number }
-    duelPlayers?: { playerId: string; avatarId?: string; isGuide?: boolean; pose?: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number; invisible?: boolean; dashReadyAt?: number; highJumpReadyAt?: number; ultimateReadyAt?: number; ultimateId?: string; ultimateActiveUntil?: number }[]
+    duelPlayers?: { playerId: string; avatarId?: string; isGuide?: boolean; pose?: number; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number; invisible?: boolean; dashCooldownMs?: number; highJumpCooldownMs?: number; ultimateCooldownMs?: number; ultimateId?: string; ultimateActiveMs?: number }[]
     shotId?: string
     shooterId?: string
     startX?: number
@@ -342,18 +342,22 @@ export function MultiplayerConnector() {
         if (message.payload?.targetPlayerId && store.pvpOutgoingInvite?.targetPlayerId === message.payload.targetPlayerId) store.setPvpOutgoingInvite(null)
       }
       if (message.type === 'duelStart' && message.payload?.duelId && message.payload.opponent) store.startDuel(message.payload.duelId, message.payload.opponent)
-      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, {
-        ...player,
-        avatarId: player.avatarId ?? 'block-explorer',
-        isGuide: Boolean(player.isGuide),
-        pose: player.pose ?? 0,
-        invisible: Boolean(player.invisible),
-        dashReadyAt: player.dashReadyAt ?? 0,
-        highJumpReadyAt: player.highJumpReadyAt ?? 0,
-        ultimateReadyAt: player.ultimateReadyAt ?? 0,
-        ultimateId: toUltimateSkillId(player.ultimateId),
-        ultimateActiveUntil: player.ultimateActiveUntil ?? 0,
-      }])))
+      if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) {
+        const receivedAt = Date.now()
+        const localDeadline = (remainingMs = 0) => remainingMs > 0 ? receivedAt + remainingMs : 0
+        store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, {
+          ...player,
+          avatarId: player.avatarId ?? 'block-explorer',
+          isGuide: Boolean(player.isGuide),
+          pose: player.pose ?? 0,
+          invisible: Boolean(player.invisible),
+          dashReadyAt: localDeadline(player.dashCooldownMs),
+          highJumpReadyAt: localDeadline(player.highJumpCooldownMs),
+          ultimateReadyAt: localDeadline(player.ultimateCooldownMs),
+          ultimateId: toUltimateSkillId(player.ultimateId),
+          ultimateActiveUntil: localDeadline(player.ultimateActiveMs),
+        }])))
+      }
       if (message.type === 'duelShot' && message.payload?.shotId && message.payload.shooterId
         && message.payload.startX !== undefined && message.payload.startY !== undefined && message.payload.startZ !== undefined
         && message.payload.endX !== undefined && message.payload.endY !== undefined && message.payload.endZ !== undefined) {

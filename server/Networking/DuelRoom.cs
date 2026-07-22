@@ -261,8 +261,12 @@ public sealed class DuelRoom
         {
             foreach (var player in new[] { _first, _second })
             {
-                _abilities[player.Id].ActiveSkillId = null;
-                _abilities[player.Id].ActiveUntil = DateTimeOffset.MinValue;
+                var ability = _abilities[player.Id];
+                ability.DashReadyAt = DateTimeOffset.MinValue;
+                ability.HighJumpReadyAt = DateTimeOffset.MinValue;
+                ability.UltimateReadyAt = DateTimeOffset.MinValue;
+                ability.ActiveSkillId = null;
+                ability.ActiveUntil = DateTimeOffset.MinValue;
                 _positionHistory[player.Id].Clear();
                 _positionHistory[player.Id].Enqueue(new(DateTimeOffset.UtcNow, player.State.X, player.State.Y, player.State.Z));
             }
@@ -486,16 +490,16 @@ public sealed class DuelRoom
                 _health[player.Id],
                 _wins[player.Id],
                 ability.ActiveSkillId == "veil" && ability.ActiveUntil > now,
-                ToUnixMilliseconds(ability.DashReadyAt),
-                ToUnixMilliseconds(ability.HighJumpReadyAt),
-                ToUnixMilliseconds(ability.UltimateReadyAt),
+                RemainingMilliseconds(ability.DashReadyAt, now),
+                RemainingMilliseconds(ability.HighJumpReadyAt, now),
+                RemainingMilliseconds(ability.UltimateReadyAt, now),
                 player.EquippedUltimateSkill,
-                ability.ActiveUntil > now ? ToUnixMilliseconds(ability.ActiveUntil) : 0);
+                RemainingMilliseconds(ability.ActiveUntil, now));
         }
     }
 
-    private static long ToUnixMilliseconds(DateTimeOffset value) =>
-        value == DateTimeOffset.MinValue ? 0 : value.ToUnixTimeMilliseconds();
+    private static long RemainingMilliseconds(DateTimeOffset readyAt, DateTimeOffset now) =>
+        readyAt <= now ? 0 : (long)Math.Ceiling((readyAt - now).TotalMilliseconds);
 
     private void Restore(ClientConnection player)
     {
@@ -526,11 +530,11 @@ public sealed class DuelRoom
         int Hp,
         int Wins,
         bool Invisible,
-        long DashReadyAt,
-        long HighJumpReadyAt,
-        long UltimateReadyAt,
+        long DashCooldownMs,
+        long HighJumpCooldownMs,
+        long UltimateCooldownMs,
         string UltimateId,
-        long UltimateActiveUntil);
+        long UltimateActiveMs);
     private readonly record struct SavedPose(float X, float Y, float Z, float DirX, float DirZ, string Area)
     { public SavedPose(PlayerState state) : this(state.X, state.Y, state.Z, state.DirX, state.DirZ, state.Area) { } }
 }
