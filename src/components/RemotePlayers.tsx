@@ -1,7 +1,7 @@
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
-import { Group, Vector3 } from 'three'
+import { Color, Group, InstancedMesh, Matrix4, Object3D, Vector3 } from 'three'
 import { useStore, type RemotePlayer } from '../store/useStore'
 import { getAvatar, type Avatar } from '../data/avatars'
 
@@ -129,11 +129,72 @@ function RemotePlayerAvatar({ player }: { player: RemotePlayer }) {
   </group>
 }
 
-export function RemotePlayers() {
-  const remotePlayers = useStore((state) => state.remotePlayers)
-  const players = Object.values(remotePlayers)
+function RemoteCrowd({ players }: { players: RemotePlayer[] }) {
+  const bodies = useRef<InstancedMesh>(null)
+  const heads = useRef<InstancedMesh>(null)
+
+  useEffect(() => {
+    if (!bodies.current || !heads.current) return
+    const bodyMatrix = new Matrix4()
+    const headMatrix = new Matrix4()
+    const dummy = new Object3D()
+    const color = new Color()
+
+    players.forEach((player, index) => {
+      const avatar = getAvatar(player.avatarId)
+      const yaw = Math.atan2(player.dirX, player.dirZ)
+
+      dummy.position.set(player.x, 0.74, player.z)
+      dummy.rotation.set(0, yaw, 0)
+      dummy.scale.set(0.82, 0.9, 0.82)
+      dummy.updateMatrix()
+      bodyMatrix.copy(dummy.matrix)
+      bodies.current!.setMatrixAt(index, bodyMatrix)
+      bodies.current!.setColorAt(index, color.set(avatar.suit))
+
+      dummy.position.set(player.x, 1.5, player.z)
+      dummy.scale.setScalar(0.82)
+      dummy.updateMatrix()
+      headMatrix.copy(dummy.matrix)
+      heads.current!.setMatrixAt(index, headMatrix)
+      heads.current!.setColorAt(index, color.set(avatar.skin))
+    })
+
+    bodies.current.count = players.length
+    heads.current.count = players.length
+    bodies.current.instanceMatrix.needsUpdate = true
+    heads.current.instanceMatrix.needsUpdate = true
+    if (bodies.current.instanceColor) bodies.current.instanceColor.needsUpdate = true
+    if (heads.current.instanceColor) heads.current.instanceColor.needsUpdate = true
+  }, [players])
+
   if (!players.length) return null
   return <group>
-    {players.map((player) => <RemotePlayerAvatar key={player.id} player={player} />)}
+    <instancedMesh ref={bodies} args={[undefined, undefined, players.length]} frustumCulled={false}>
+      <capsuleGeometry args={[0.27, 0.72, 3, 6]} />
+      <meshStandardMaterial vertexColors roughness={0.8} />
+    </instancedMesh>
+    <instancedMesh ref={heads} args={[undefined, undefined, players.length]} frustumCulled={false}>
+      <sphereGeometry args={[0.23, 8, 6]} />
+      <meshStandardMaterial vertexColors roughness={0.88} />
+    </instancedMesh>
+  </group>
+}
+
+export function RemotePlayers() {
+  const remotePlayers = useStore((state) => state.remotePlayers)
+  const playerPose = useStore((state) => state.playerPose)
+  const players = Object.values(remotePlayers)
+  const closestFirst = [...players].sort((first, second) => {
+    const firstDistance = (first.x - playerPose.x) ** 2 + (first.z - playerPose.z) ** 2
+    const secondDistance = (second.x - playerPose.x) ** 2 + (second.z - playerPose.z) ** 2
+    return firstDistance - secondDistance
+  })
+  const detailedPlayers = closestFirst.slice(0, 12)
+  const crowdPlayers = closestFirst.slice(12)
+  if (!players.length) return null
+  return <group>
+    {detailedPlayers.map((player) => <RemotePlayerAvatar key={player.id} player={player} />)}
+    <RemoteCrowd players={crowdPlayers} />
   </group>
 }

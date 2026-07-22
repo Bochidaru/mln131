@@ -25,6 +25,7 @@ public sealed class DuelRoom
     private readonly Dictionary<string, int> _wins = new();
     private readonly Dictionary<string, DateTimeOffset> _lastShot = new();
     private readonly Dictionary<string, float> _verticalVelocity = new();
+    private readonly Dictionary<string, bool> _jumpHeld = new();
     private readonly Action<DuelRoom> _finished;
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
@@ -54,6 +55,7 @@ public sealed class DuelRoom
         _health[first.Id] = _health[second.Id] = 100;
         _wins[first.Id] = _wins[second.Id] = 0;
         _verticalVelocity[first.Id] = _verticalVelocity[second.Id] = 0;
+        _jumpHeld[first.Id] = _jumpHeld[second.Id] = false;
         SpawnRound();
     }
 
@@ -141,10 +143,12 @@ public sealed class DuelRoom
                 player.State.X = nextX;
                 player.State.Z = nextZ;
             }
-            if (input.Jump && player.State.Y <= EyeHeight + 0.001f)
+            var wasJumpHeld = _jumpHeld[player.Id];
+            if (input.Jump && !wasJumpHeld && player.State.Y <= EyeHeight + 0.001f)
             {
                 _verticalVelocity[player.Id] = JumpSpeed;
             }
+            _jumpHeld[player.Id] = input.Jump;
             _verticalVelocity[player.Id] -= Gravity * delta;
             player.State.Y += _verticalVelocity[player.Id] * delta;
             if (player.State.Y <= EyeHeight)
@@ -169,6 +173,7 @@ public sealed class DuelRoom
         _second.State.X = ArenaX + 22; _second.State.Z = ArenaZ + 22; _second.State.DirX = -1; _second.State.DirZ = -1;
         _first.State.Y = _second.State.Y = EyeHeight;
         _verticalVelocity[_first.Id] = _verticalVelocity[_second.Id] = 0;
+        _jumpHeld[_first.Id] = _jumpHeld[_second.Id] = false;
         _health[_first.Id] = _health[_second.Id] = 100;
     }
 

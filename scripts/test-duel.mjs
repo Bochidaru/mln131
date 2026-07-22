@@ -94,6 +94,14 @@ try {
   const movedPlayer = moved.payload.duelPlayers.find((player) => player.playerId === first.id)
   assert.ok(movedPlayer.x > initialPlayer.x, 'Duel input must move the server-owned player')
 
+  first.send('duelInput', { moveX: 0, moveZ: 0, dirX: 1, dirZ: 0, sprint: 0, jump: 1 })
+  const jumped = await first.waitFor('duelSnapshot', (message) => {
+    const player = message.payload?.duelPlayers?.find((candidate) => candidate.playerId === first.id)
+    return player && player.y > 1.85
+  })
+  assert.ok(jumped.payload.duelPlayers.find((player) => player.playerId === first.id).y > 1.85, 'Jump must update the server-owned Y coordinate')
+  first.send('duelInput', { moveX: 0, moveZ: 0, dirX: 1, dirZ: 0, sprint: 0, jump: 0 })
+
   second.send('duelInput', { moveX: 1, moveZ: 0, dirX: -1, dirZ: 0, sprint: 1, jump: 0 })
   await second.waitFor('duelSnapshot', (message) => {
     const player = message.payload?.duelPlayers?.find((candidate) => candidate.playerId === second.id)
@@ -134,7 +142,7 @@ try {
     fourth.waitFor('pvpInviteExpired', (message) => message.payload?.fromPlayerId === third.id, 12_000),
   ])
 
-  console.log('Duel smoke test passed: invite cooldown/expiry, movement, server hit, shot event, forfeit, and return pose.')
+  console.log('Duel smoke test passed: invite cooldown/expiry, movement, jump, server hit, shot event, forfeit, and return pose.')
 } finally {
   first.close()
   second.close()

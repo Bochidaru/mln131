@@ -38,6 +38,7 @@ export function Player() {
   const jumping = useRef(false)
   const lastPoseUpdate = useRef(0)
   const lastDuelInput = useRef(0)
+  const duelJumpQueued = useRef(false)
   const walkPhase = useRef(0)
   const focusedSeatId = useRef<string | null>(null)
   const seatReturn = useRef<[number, number, number] | null>(null)
@@ -63,7 +64,9 @@ export function Player() {
         if (controls.current?.isLocked) controls.current.unlock()
         else controls.current?.lock()
       }
-      if (event.code === 'Space' && !event.repeat && store.controlsLocked && !jumping.current) {
+      if (event.code === 'Space' && !event.repeat && store.duel) {
+        duelJumpQueued.current = true
+      } else if (event.code === 'Space' && !event.repeat && store.controlsLocked && !jumping.current) {
         jumping.current = true
         verticalVelocity.current = jumpSpeed
       }
@@ -150,7 +153,7 @@ export function Player() {
 
     if (store.duel && store.multiplayerPlayerId) {
       const self = store.duel.players[store.multiplayerPlayerId]
-      if (self) frameCamera.position.set(self.x, eyeHeight, self.z)
+      if (self) frameCamera.position.set(self.x, self.y, self.z)
       const forwardInput = (keys.current.has('KeyW') ? 1 : 0) - (keys.current.has('KeyS') ? 1 : 0)
       const strafeInput = (keys.current.has('KeyD') ? 1 : 0) - (keys.current.has('KeyA') ? 1 : 0)
       right.crossVectors(forward, frameCamera.up).normalize()
@@ -164,8 +167,9 @@ export function Player() {
           dirX: forward.x,
           dirZ: forward.z,
           sprint: keys.current.has('ShiftLeft') || keys.current.has('ShiftRight') ? 1 : 0,
-          jump: keys.current.has('Space') ? 1 : 0,
+          jump: duelJumpQueued.current ? 1 : 0,
         })
+        duelJumpQueued.current = false
         lastDuelInput.current = state.clock.elapsedTime
       }
       return
