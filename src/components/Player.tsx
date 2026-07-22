@@ -8,6 +8,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { resolvePlayerMovement } from '../hooks/useCollision'
 import { useStore } from '../store/useStore'
 import { seatRegistry } from '../utils/seatRegistry'
+import { findAimedPvpTarget } from '../utils/pvpTarget'
 import { getAreaAt } from '../data/layout'
 
 const direction = new Vector3()
@@ -70,8 +71,9 @@ export function Player() {
         jumping.current = true
         verticalVelocity.current = jumpSpeed
       }
-      if (!event.repeat && store.entered && !store.activePoster && !store.quizOpen && (event.code === 'Digit1' || event.code === 'Digit2' || event.code === 'Digit3')) {
-        store.setPlayerEmotePose(event.code === 'Digit1' ? 0 : event.code === 'Digit2' ? 1 : 2)
+      const poseKey = /^Digit([1-5])$/.exec(event.code)
+      if (!event.repeat && store.entered && !store.activePoster && !store.quizOpen && poseKey) {
+        store.setPlayerEmotePose(Number(poseKey[1]) - 1)
       }
       keys.current.add(event.code)
     }
@@ -109,7 +111,8 @@ export function Player() {
         museumAudio.click()
         return
       }
-      const pvpTarget = Object.values(store.remotePlayers).find((player) => (player.x - store.playerPose.x) ** 2 + (player.z - store.playerPose.z) ** 2 <= 3.5 ** 2)
+      camera.getWorldDirection(forward)
+      const pvpTarget = findAimedPvpTarget(Object.values(store.remotePlayers), camera.position, forward)
       if (pvpTarget) {
         store.requestPvp(pvpTarget.id, pvpTarget.name)
         return
@@ -151,6 +154,7 @@ export function Player() {
     }
 
     frameCamera.getWorldDirection(forward)
+    const aimY = forward.y
     forward.y = 0
     forward.normalize()
 
@@ -187,7 +191,7 @@ export function Player() {
         jumping.current = false
       }
       if (state.clock.elapsedTime - lastPoseUpdate.current > 0.12) {
-        store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirZ: forward.z })
+        store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirY: aimY, dirZ: forward.z })
         lastPoseUpdate.current = state.clock.elapsedTime
       }
       return
@@ -204,7 +208,7 @@ export function Player() {
         store.setMobileLook({ x: 0, y: 0 })
       }
       if (state.clock.elapsedTime - lastPoseUpdate.current > 0.12) {
-        store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirZ: forward.z })
+        store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirY: aimY, dirZ: forward.z })
         lastPoseUpdate.current = state.clock.elapsedTime
       }
       return
@@ -274,7 +278,7 @@ export function Player() {
 
     if (state.clock.elapsedTime - lastPoseUpdate.current > 0.08) {
       frameCamera.getWorldDirection(forward)
-      store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirZ: forward.z })
+      store.setPlayerPose({ x: frameCamera.position.x, z: frameCamera.position.z, dirX: forward.x, dirY: forward.y, dirZ: forward.z })
       lastPoseUpdate.current = state.clock.elapsedTime
     }
   })

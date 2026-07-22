@@ -16,7 +16,7 @@ export function DuelHud() {
       <header><span>Đấu trường riêng · 64 Hz</span><strong>{duel.opponent}</strong></header>
       <div className="duel-score"><b>{self?.wins ?? 0}</b><span>CHẠM 3</span><b>{opponent?.wins ?? 0}</b></div>
       <div className="duel-health"><span>HP {self?.hp ?? 100}</span><i><b style={{ width: `${self?.hp ?? 100}%` }} /></i></div>
-      <small>WASD di chuyển · Shift chạy · Space nhảy · 1/2/3 đổi pose · Nhấp chuột để bắn</small>
+      <small>WASD di chuyển · Shift chạy · Space nhảy · 1–5 đổi pose · Nhấp chuột để bắn</small>
       {!result && <button onClick={forfeitDuel}>Bỏ cuộc</button>}
     </section>
     {result && <section className="duel-result" role="status" aria-live="assertive">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore'
+import { findAimedPvpTarget } from '../utils/pvpTarget'
 
 export function PvpPanel() {
   const pose = useStore((state) => state.playerPose)
@@ -14,7 +15,9 @@ export function PvpPanel() {
   const setInvite = useStore((state) => state.setPvpInvite)
   const setOutgoingInvite = useStore((state) => state.setPvpOutgoingInvite)
   const [now, setNow] = useState(0)
-  const target = Object.values(remote).find((player) => (player.x - pose.x) ** 2 + (player.z - pose.z) ** 2 <= 3.5 ** 2)
+  const target = findAimedPvpTarget(Object.values(remote),
+    { x: pose.x, y: 1.68, z: pose.z },
+    { x: pose.dirX, y: pose.dirY ?? 0, z: pose.dirZ })
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setNow(Date.now()))

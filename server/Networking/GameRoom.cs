@@ -355,7 +355,7 @@ public sealed class GameRoom
         connection.State.Area = string.IsNullOrWhiteSpace(pose.Area) ? "grounds" : pose.Area;
         connection.State.FocusedPoster = pose.FocusedPoster;
         connection.State.Seated = pose.Seated;
-        connection.State.Pose = Math.Clamp(pose.Pose, 0, 2);
+        connection.State.Pose = Math.Clamp(pose.Pose, 0, 4);
         connection.State.TickId = _tickCounter;
     }
 
@@ -364,7 +364,7 @@ public sealed class GameRoom
         moveX = moveZ = dirX = dirZ = 0; sprinting = jump = false; pose = 0;
         if (payload.TryGetProperty("sprint", out var sprintElement)) sprinting = sprintElement.ValueKind == JsonValueKind.True || sprintElement.TryGetInt32(out var sprintValue) && sprintValue != 0;
         if (payload.TryGetProperty("jump", out var jumpElement)) jump = jumpElement.ValueKind == JsonValueKind.True || jumpElement.TryGetInt32(out var jumpValue) && jumpValue != 0;
-        if (payload.TryGetProperty("pose", out var poseElement) && poseElement.TryGetInt32(out var poseValue)) pose = Math.Clamp(poseValue, 0, 2);
+        if (payload.TryGetProperty("pose", out var poseElement) && poseElement.TryGetInt32(out var poseValue)) pose = Math.Clamp(poseValue, 0, 4);
         return payload.TryGetProperty("moveX", out var moveXElement) && moveXElement.TryGetSingle(out moveX)
             && payload.TryGetProperty("moveZ", out var moveZElement) && moveZElement.TryGetSingle(out moveZ)
             && payload.TryGetProperty("dirX", out var dirXElement) && dirXElement.TryGetSingle(out dirX)

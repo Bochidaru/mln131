@@ -268,10 +268,11 @@ function MuseumFacade() {
   const columns = [-20.2, -16.2, -12.2, -8.2, 8.2, 12.2, 16.2, 20.2];
   return (
     <group>
-      <mesh position={[0, 0.38, 8.5]} receiveShadow>
-        <boxGeometry args={[44, 0.76, 1.6]} />
+      {/* Leave the automatic-door opening flush with the lobby and exterior paving. */}
+      {[-13.6, 13.6].map((x) => <mesh key={x} position={[x, 0.38, 8.5]} receiveShadow>
+        <boxGeometry args={[16.8, 0.76, 1.6]} />
         <meshStandardMaterial color="#c9c1b1" roughness={0.82} />
-      </mesh>
+      </mesh>)}
       {[-14.7, 14.7].map((x) => (
         <mesh key={x} position={[x, 5.15, 8.55]} castShadow receiveShadow>
           <boxGeometry args={[14.6, 9.55, 1.2]} />

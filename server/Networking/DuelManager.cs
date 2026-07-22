@@ -4,6 +4,7 @@ namespace server.Networking;
 
 public sealed class DuelManager
 {
+    private const float InteractionRange = 1.25f;
     private static readonly TimeSpan InviteDuration = TimeSpan.FromSeconds(10);
     private const int MinimumScoreToDuel = 5;
     private readonly ConcurrentDictionary<string, DuelRoom> _duels = new();
@@ -43,7 +44,7 @@ public sealed class DuelManager
         }
         var dx = requester.State.X - target.State.X;
         var dz = requester.State.Z - target.State.Z;
-        if (dx * dx + dz * dz > 3.5f * 3.5f)
+        if (dx * dx + dz * dz > InteractionRange * InteractionRange)
         {
             _ = requester.SendAsync("pvpRequestRejected", new { reason = "Người chơi đã ở quá xa." }, CancellationToken.None);
             return;

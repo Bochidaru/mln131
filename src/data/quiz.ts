@@ -146,15 +146,17 @@ const answers = Object.values(bank).flatMap((items) => items.map((item) => item[
 export function getRoomQuestionBank(roomId: number): QuizQuestion[] {
   const items = bank[roomId] ?? []
   return items.map(([question, correct], index) => {
-    const options = [correct, answers[(index * 11 + roomId * 17) % answers.length], answers[(index * 19 + roomId * 7) % answers.length], answers[(index * 23 + roomId * 3) % answers.length]]
-    const unique = [...new Set(options)]
+    const options = [answers[(index * 11 + roomId * 17) % answers.length], answers[(index * 19 + roomId * 7) % answers.length], answers[(index * 23 + roomId * 3) % answers.length]]
+    const unique = [...new Set(options.filter((answer) => answer !== correct))]
     let cursor = index * 29 + roomId
-    while (unique.length < 4) {
+    while (unique.length < 3) {
       const candidate = answers[cursor % answers.length]
-      if (!unique.includes(candidate)) unique.push(candidate)
+      if (candidate !== correct && !unique.includes(candidate)) unique.push(candidate)
       cursor += 31
     }
-    return { question, options: unique.slice(0, 4), correctIndex: 0 }
+    const correctIndex = (index + roomId) % 4
+    unique.splice(correctIndex, 0, correct)
+    return { question, options: unique.slice(0, 4), correctIndex }
   })
 }
 

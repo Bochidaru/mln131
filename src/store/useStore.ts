@@ -7,6 +7,7 @@ export interface PlayerPose {
   x: number
   z: number
   dirX: number
+  dirY?: number
   dirZ: number
 }
 
@@ -185,7 +186,7 @@ export const useStore = create<MuseumState>((set) => ({
   seated: null,
   currentArea: 'grounds',
   visitedRooms: [],
-  playerPose: { x: 0, z: 42, dirX: 0, dirZ: -1 },
+  playerPose: { x: 0, z: 42, dirX: 0, dirY: 0, dirZ: -1 },
   controlsLocked: false,
   audioOn: true,
   mapExpanded: true,
@@ -249,7 +250,7 @@ export const useStore = create<MuseumState>((set) => ({
   setMultiplayerPlayerId: (multiplayerPlayerId) => set({ multiplayerPlayerId }),
   setPlayerName: (playerName) => set({ playerName }),
   setAvatarId: (avatarId) => set({ avatarId }),
-  setPlayerEmotePose: (playerEmotePose) => set({ playerEmotePose: Math.min(2, Math.max(0, playerEmotePose)) }),
+  setPlayerEmotePose: (playerEmotePose) => set({ playerEmotePose: Math.min(4, Math.max(0, playerEmotePose)) }),
   setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
   setGraphicsQuality: (graphicsQuality) => {
     window.localStorage.setItem('mln131-graphics-quality', graphicsQuality)

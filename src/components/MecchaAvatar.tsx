@@ -4,12 +4,15 @@ import { Box3, Color, Mesh, Vector3, type Material, type Object3D } from 'three'
 import { getAvatar } from '../data/avatars'
 
 const modelUrls = [
-  '/models/meccha-chameleon-default.glb',
   '/models/meccha-chameleon-pose-1.glb',
   '/models/meccha-chameleon-pose-2.glb',
+  '/models/meccha-chameleon-pose-3.glb',
+  '/models/meccha-chameleon-pose-4.glb',
+  '/models/meccha-chameleon-pose-5.glb',
 ] as const
 
-const poseHeights = [1.72, 1.72, 1.4] as const
+// All source poses use the same character scale; crouched poses stay naturally shorter.
+const poseHeights = [1.72, 1.72, 1.4, 1.72, 1] as const
 
 function cloneMaterial(material: Material, color: string) {
   const cloned = material.clone() as Material & { color?: Color }
@@ -27,7 +30,7 @@ function disposeClone(object: Object3D) {
 
 export function MecchaAvatar({ avatarId, pose = 0 }: { avatarId: string; pose?: number }) {
   const avatar = getAvatar(avatarId)
-  const normalizedPose = Math.min(2, Math.max(0, Math.trunc(pose)))
+  const normalizedPose = Math.min(4, Math.max(0, Math.trunc(pose)))
   const { scene } = useGLTF(modelUrls[normalizedPose])
   const prepared = useMemo(() => {
     const clone = scene.clone(true)
