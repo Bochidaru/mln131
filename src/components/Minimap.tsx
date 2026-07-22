@@ -21,13 +21,14 @@ export function Minimap() {
   const expanded = useStore((state) => state.mapExpanded)
   const toggleMap = useStore((state) => state.toggleMap)
   const setMapExpanded = useStore((state) => state.setMapExpanded)
+  const duel = useStore((state) => state.duel)
   const mobile = useIsMobile()
 
   useEffect(() => {
     if (mobile) setMapExpanded(false)
   }, [mobile, setMapExpanded])
 
-  if (!entered || active) return null
+  if (!entered || active || duel) return null
 
   const playerX = mapX(Math.max(bounds.minX, Math.min(bounds.maxX, pose.x)))
   const playerY = mapY(Math.max(bounds.minZ, Math.min(bounds.maxZ, pose.z)))

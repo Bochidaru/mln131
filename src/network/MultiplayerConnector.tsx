@@ -39,6 +39,15 @@ type ServerMessage = {
     transfer?: number
     returnPose?: { x: number; z: number; dirX: number; dirZ: number }
     duelPlayers?: { playerId: string; x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }[]
+    shotId?: string
+    shooterId?: string
+    startX?: number
+    startY?: number
+    startZ?: number
+    endX?: number
+    endY?: number
+    endZ?: number
+    hit?: boolean
     score?: number
     quizRoomId?: number
     correct?: number
@@ -236,6 +245,21 @@ export function MultiplayerConnector() {
       if (message.type === 'pvpInvite' && message.payload?.fromPlayerId && message.payload.name) store.setPvpInvite({ fromPlayerId: message.payload.fromPlayerId, name: message.payload.name })
       if (message.type === 'duelStart' && message.payload?.duelId && message.payload.opponent) store.startDuel(message.payload.duelId, message.payload.opponent)
       if (message.type === 'duelSnapshot' && message.payload?.duelPlayers) store.setDuelSnapshot(Object.fromEntries(message.payload.duelPlayers.map((player) => [player.playerId, player])))
+      if (message.type === 'duelShot' && message.payload?.shotId && message.payload.shooterId
+        && message.payload.startX !== undefined && message.payload.startY !== undefined && message.payload.startZ !== undefined
+        && message.payload.endX !== undefined && message.payload.endY !== undefined && message.payload.endZ !== undefined) {
+        store.setDuelShot({
+          shotId: message.payload.shotId,
+          shooterId: message.payload.shooterId,
+          startX: message.payload.startX,
+          startY: message.payload.startY,
+          startZ: message.payload.startZ,
+          endX: message.payload.endX,
+          endY: message.payload.endY,
+          endZ: message.payload.endZ,
+          hit: Boolean(message.payload.hit),
+        })
+      }
       if (message.type === 'duelResult') {
         if (message.payload?.score !== undefined) store.setScore(message.payload.score)
         if (message.payload?.returnPose) store.setPlayerPose(message.payload.returnPose)

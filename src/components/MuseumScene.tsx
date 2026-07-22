@@ -33,13 +33,14 @@ function PostEffects() {
 export function MuseumScene() {
   const graphicsQuality = useStore((state) => state.graphicsQuality)
   const lowEndDevice = graphicsQuality === 'low'
+  const duelActive = useStore((state) => Boolean(state.duel))
 
   return <main className="museum">
     <Canvas
       id="museum-canvas"
       camera={{ fov: 58, near: 0.08, far: lowEndDevice ? 115 : 190 }}
-      dpr={lowEndDevice ? [0.7, 1] : [1, 1.65]}
-      gl={{ antialias: false, powerPreference: 'high-performance', alpha: false, precision: lowEndDevice ? 'mediump' : 'highp' }}
+      dpr={lowEndDevice ? 0.65 : [1, 1.65]}
+      gl={{ antialias: false, powerPreference: 'high-performance', alpha: false }}
       shadows={lowEndDevice ? false : { type: PCFSoftShadowMap }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
@@ -48,7 +49,7 @@ export function MuseumScene() {
       }}>
       <color attach="background" args={['#b7c2b6']} />
       <fog attach="fog" args={['#c2c6b6', 92, 175]} />
-      <Sky distance={450000} sunPosition={[64, 22, 48]} turbidity={5.4} rayleigh={2.1} mieCoefficient={0.008} mieDirectionalG={0.86} />
+      {!lowEndDevice && <Sky distance={450000} sunPosition={[64, 22, 48]} turbidity={5.4} rayleigh={2.1} mieCoefficient={0.008} mieDirectionalG={0.86} />}
       <hemisphereLight args={['#dcecff', '#5f574a', 1.05]} />
       <ambientLight color="#fff1dc" intensity={0.22} />
       <directionalLight
@@ -69,15 +70,17 @@ export function MuseumScene() {
       <pointLight position={[0, 5.2, 10.5]} color="#ffdca6" intensity={8} distance={18} decay={2} />
 
       <Suspense fallback={null}>
-        <Surroundings lowEnd={lowEndDevice} />
-        <Exterior />
-        <MuseumInterior />
-        {lowEndDevice ? <></> : <><Environment files="/textures/env.hdr" environmentIntensity={0.42} /><BakeShadows /></>}
+        {!duelActive && <>
+          <Surroundings lowEnd={lowEndDevice} />
+          <Exterior />
+          <MuseumInterior lowEnd={lowEndDevice} />
+          {lowEndDevice ? <></> : <><Environment files="/textures/env.hdr" environmentIntensity={0.42} /><BakeShadows /></>}
+        </>}
       </Suspense>
       <Player />
-      <RemotePlayers />
+      {!duelActive && <RemotePlayers />}
       <DuelArena />
-      {lowEndDevice ? <></> : <PostEffects />}
+      {!lowEndDevice && !duelActive && <PostEffects />}
     </Canvas>
     <Loader dataInterpolation={(progress) => `ĐANG CHUẨN BỊ KHÔNG GIAN · ${progress.toFixed(0)}%`} />
     <AudioController />

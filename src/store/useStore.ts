@@ -40,8 +40,22 @@ export interface ChatEntry {
   text: string
 }
 
+export interface DuelShot {
+  shotId: string
+  shooterId: string
+  startX: number
+  startY: number
+  startZ: number
+  endX: number
+  endY: number
+  endZ: number
+  hit: boolean
+}
+
 let outgoingActionId = 0
 const nextOutgoingActionId = () => ++outgoingActionId
+const savedGraphicsQuality = window.localStorage.getItem('mln131-graphics-quality')
+const initialGraphicsQuality: 'low' | 'high' = savedGraphicsQuality === 'high' ? 'high' : 'low'
 
 interface MuseumState {
   entered: boolean
@@ -81,6 +95,7 @@ interface MuseumState {
   outgoingPvp: { id: number; type: 'pvpRequest' | 'pvpResponse'; payload: Record<string, unknown> } | null
   duel: { id: string; opponent: string; players: Record<string, { x: number; y: number; z: number; dirX: number; dirZ: number; hp: number; wins: number }> } | null
   duelReturnPose: PlayerPose | null
+  duelShot: DuelShot | null
   outgoingDuel: { id: number; type: 'duelInput' | 'duelShoot' | 'duelForfeit'; payload: Record<string, number> } | null
   remotePlayers: Record<string, RemotePlayer>
   enter: () => void
@@ -121,6 +136,7 @@ interface MuseumState {
   setPvpInvite: (invite: MuseumState['pvpInvite']) => void
   startDuel: (id: string, opponent: string) => void
   setDuelSnapshot: (players: NonNullable<MuseumState['duel']>['players']) => void
+  setDuelShot: (shot: DuelShot) => void
   endDuel: (returnPose?: PlayerPose) => void
   clearDuelReturnPose: () => void
   sendDuel: (type: 'duelInput' | 'duelShoot' | 'duelForfeit', payload?: Record<string, number>) => void
@@ -152,7 +168,7 @@ export const useStore = create<MuseumState>((set) => ({
   playerName: '',
   avatarId: 'block-explorer',
   mouseSensitivity: 1,
-  graphicsQuality: 'high',
+  graphicsQuality: initialGraphicsQuality,
   settingsOpen: false,
   entranceDoorOpen: false,
   score: 0,
@@ -169,6 +185,7 @@ export const useStore = create<MuseumState>((set) => ({
   outgoingPvp: null,
   duel: null,
   duelReturnPose: null,
+  duelShot: null,
   outgoingDuel: null,
   remotePlayers: {},
   enter: () => set({ entered: true, joining: false, joinError: null }),
@@ -200,7 +217,10 @@ export const useStore = create<MuseumState>((set) => ({
   setPlayerName: (playerName) => set({ playerName }),
   setAvatarId: (avatarId) => set({ avatarId }),
   setMouseSensitivity: (mouseSensitivity) => set({ mouseSensitivity: Math.min(2, Math.max(0.25, mouseSensitivity)) }),
-  setGraphicsQuality: (graphicsQuality) => set({ graphicsQuality }),
+  setGraphicsQuality: (graphicsQuality) => {
+    window.localStorage.setItem('mln131-graphics-quality', graphicsQuality)
+    set({ graphicsQuality })
+  },
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setEntranceDoorOpen: (entranceDoorOpen) => set({ entranceDoorOpen }),
   setScore: (score) => set({ score }),
@@ -215,9 +235,10 @@ export const useStore = create<MuseumState>((set) => ({
   requestPvp: (targetPlayerId) => set({ outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpRequest', payload: { targetPlayerId } } }),
   respondPvp: (fromPlayerId, accepted) => set({ outgoingPvp: { id: nextOutgoingActionId(), type: 'pvpResponse', payload: { fromPlayerId, accepted } }, pvpInvite: null }),
   setPvpInvite: (pvpInvite) => set({ pvpInvite }),
-  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, seated: null, quizOpen: false, pvpInvite: null }),
+  startDuel: (id, opponent) => set({ duel: { id, opponent, players: {} }, duelShot: null, seated: null, quizOpen: false, pvpInvite: null }),
   setDuelSnapshot: (players) => set((state) => state.duel ? { duel: { ...state.duel, players } } : state),
-  endDuel: (duelReturnPose) => set({ duel: null, pvpInvite: null, duelReturnPose: duelReturnPose ?? null }),
+  setDuelShot: (duelShot) => set({ duelShot }),
+  endDuel: (duelReturnPose) => set({ duel: null, duelShot: null, pvpInvite: null, duelReturnPose: duelReturnPose ?? null }),
   clearDuelReturnPose: () => set({ duelReturnPose: null }),
   sendDuel: (type, payload = {}) => set({ outgoingDuel: { id: nextOutgoingActionId(), type, payload } }),
   forfeitDuel: () => set((state) => state.duel ? { outgoingDuel: { id: nextOutgoingActionId(), type: 'duelForfeit', payload: {} } } : state),

@@ -11,8 +11,9 @@ export function MobileControls() {
   const focused = useStore((state) => state.focusedPoster)
   const active = useStore((state) => state.activePoster)
   const entered = useStore((state) => state.entered)
+  const duel = useStore((state) => state.duel)
 
-  if (!mobile || active || !entered) return null
+  if (!mobile || active || !entered || duel) return null
   const stopMove = () => { start.current = null; setMove({ x: 0, z: 0 }) }
   const stopLook = () => { lookStart.current = null; setLook({ x: 0, y: 0 }) }
 

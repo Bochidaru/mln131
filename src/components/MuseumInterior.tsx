@@ -234,7 +234,7 @@ function GalleryArtwork({ image, position, rotationY = 0 }: {
   </group>
 }
 
-function GalleryRoom({ layout }: { layout: GalleryLayout }) {
+function GalleryRoom({ layout, lowEnd }: { layout: GalleryLayout; lowEnd: boolean }) {
   const room = rooms[layout.roomId];
   const { center, size, side, accent } = layout;
   const outerX = side === "left" ? -20.86 : 20.86;
@@ -361,7 +361,7 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
       key={offset}
       position={[side === 'left' ? -17.8 : 17.8, 5.12, center.z + offset]}
       target={[outerX, 2.35, center.z + offset]}
-      light={index === 0}
+      light={!lowEnd && index === 0}
       angle={outerOffsets.length > 1 ? 0.92 : 0.4}
       intensity={outerOffsets.length > 1 ? 30 : 20}
       distance={12}
@@ -372,7 +372,7 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
         key={`front-${offset}`}
         position={[center.x + offset, 5.12, frontZ - 3]}
         target={[center.x + offset, 2.35, frontZ]}
-        light={index === 0}
+        light={!lowEnd && index === 0}
         angle={0.92}
         intensity={30}
         distance={12}
@@ -426,11 +426,11 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
           </mesh>
         </Turntable>
       </group>
-      <DustMotes
+      {!lowEnd && <DustMotes
         position={[center.x, 2.5, center.z]}
         bounds={[13, 4.2, 14.5]}
         count={50}
-      />
+      />}
       <GallerySign layout={layout} room={room} />
 
       <group position={[side === "left" ? -4.18 : 4.18, 0, center.z]}>
@@ -446,13 +446,13 @@ function GalleryRoom({ layout }: { layout: GalleryLayout }) {
         </mesh>
       </group>
 
-      <pointLight
+      {!lowEnd && <pointLight
         position={[center.x, 4.9, center.z]}
         color="#fff4dc"
         intensity={7}
         distance={11}
         decay={2}
-      />
+      />}
     </group>
   );
 }
@@ -586,7 +586,7 @@ function ReceptionDesk() {
   );
 }
 
-function LobbySculpture() {
+function LobbySculpture({ lowEnd }: { lowEnd: boolean }) {
   return (
     <group position={[0, 0, -3.15]}>
       <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
@@ -594,20 +594,20 @@ function LobbySculpture() {
         <meshStandardMaterial color="#d7d0c2" roughness={0.68} />
       </mesh>
       <mesh position={[0, 1.72, 0]} castShadow rotation={[0.12, 0.15, -0.18]}>
-        <torusKnotGeometry args={[0.54, 0.15, 96, 12, 2, 3]} />
+        <torusKnotGeometry args={[0.54, 0.15, lowEnd ? 32 : 96, lowEnd ? 6 : 12, 2, 3]} />
         <meshStandardMaterial
           color="#9b3429"
           metalness={0.48}
           roughness={0.3}
         />
       </mesh>
-      <pointLight
+      {!lowEnd && <pointLight
         position={[0, 2.55, 0]}
         color="#ffe0b0"
         intensity={5}
         distance={6}
         decay={2}
-      />
+      />}
     </group>
   );
 }
@@ -693,7 +693,7 @@ const lobbyFloorLines: FloorLine[] = [
   })),
 ];
 
-function Lobby() {
+function Lobby({ lowEnd }: { lowEnd: boolean }) {
   const room = rooms[0];
   const marble = usePbrMaps("marble", 4, 3.2);
   return (
@@ -712,20 +712,22 @@ function Lobby() {
         receiveShadow
       >
         <planeGeometry args={[26, 20]} />
-        <MeshReflectorMaterial
-          {...marble}
-          color="#d9ccb8"
-          resolution={512}
-          mirror={0.45}
-          mixBlur={1}
-          mixStrength={0.6}
-          blur={[280, 90]}
-          depthScale={0.4}
-          minDepthThreshold={0.85}
-          maxDepthThreshold={1.2}
-          metalness={0.02}
-          roughness={1}
-        />
+        {lowEnd
+          ? <meshStandardMaterial color="#d9ccb8" roughness={0.95} />
+          : <MeshReflectorMaterial
+              {...marble}
+              color="#d9ccb8"
+              resolution={512}
+              mirror={0.45}
+              mixBlur={1}
+              mixStrength={0.6}
+              blur={[280, 90]}
+              depthScale={0.4}
+              minDepthThreshold={0.85}
+              maxDepthThreshold={1.2}
+              metalness={0.02}
+              roughness={1}
+            />}
       </mesh>
       <FloorLines lines={lobbyFloorLines} />
       <Wall position={[-13.15, 4.4, -1]} size={[0.3, 8.8, 20.2]} />
@@ -767,7 +769,7 @@ function Lobby() {
 
       <ReceptionDesk />
       <Receptionist position={[-6.3, 0, -10.45]} />
-      <LobbySculpture />
+      <LobbySculpture lowEnd={lowEnd} />
       <InteractiveBench position={[6.2, 0, -5.9]} length={2.1} />
       <InteractiveBench position={[6.2, 0, -7.7]} length={2.1} />
 
@@ -818,7 +820,7 @@ function Lobby() {
               roughness={0.4}
             />
           </mesh>
-          <ClothBanner
+          {!lowEnd && <ClothBanner
             pinned="top"
             width={1.5}
             height={3.2}
@@ -826,10 +828,10 @@ function Lobby() {
             amplitude={0.055}
             speed={0.8}
             position={[0, 6.95, 0]}
-          />
+          />}
         </group>
       ))}
-      <DustMotes position={[0, 3.6, -1]} bounds={[22, 6, 17]} count={70} />
+      {!lowEnd && <DustMotes position={[0, 3.6, -1]} bounds={[22, 6, 17]} count={70} />}
 
       <Poster
         data={room.posters[0]}
@@ -841,20 +843,20 @@ function Lobby() {
         position={[12.9, 2.7, -2.1]}
         rotationY={-Math.PI / 2}
       />
-      <SpotFixture position={[-10.1, 6.9, -2.1]} target={[-12.8, 2.5, -2.1]} />
-      <SpotFixture position={[10.1, 6.9, -2.1]} target={[12.8, 2.5, -2.1]} />
-      <pointLight
+      <SpotFixture position={[-10.1, 6.9, -2.1]} target={[-12.8, 2.5, -2.1]} light={!lowEnd} />
+      <SpotFixture position={[10.1, 6.9, -2.1]} target={[12.8, 2.5, -2.1]} light={!lowEnd} />
+      {!lowEnd && <pointLight
         position={[0, 7.6, 1.2]}
         color="#fff0d4"
         intensity={13}
         distance={16}
         decay={2}
-      />
+      />}
     </group>
   );
 }
 
-function CentralCorridor() {
+function CentralCorridor({ lowEnd }: { lowEnd: boolean }) {
   const wallSpans: Array<[number, number]> = [
     [-10, -18.6],
     [-23.4, -39.6],
@@ -874,7 +876,7 @@ function CentralCorridor() {
           metalness={0.04}
         />
       </mesh>
-      <DustMotes position={[0, 2.9, -50.6]} bounds={[7, 4.4, 78]} count={40} />
+      {!lowEnd && <DustMotes position={[0, 2.9, -50.6]} bounds={[7, 4.4, 78]} count={40} />}
       <Wall
         position={[0, 5.92, -50.6]}
         size={[8.3, 0.18, 81.2]}
@@ -988,7 +990,7 @@ function CentralCorridor() {
                 />
               </mesh>
             ))}
-            {index % 2 === 0 && (
+            {!lowEnd && index % 2 === 0 && (
               <pointLight
                 position={[0, 5.35, z]}
                 color="#ffeaca"
@@ -1053,14 +1055,14 @@ function BuildingShell() {
   );
 }
 
-export function MuseumInterior() {
+export function MuseumInterior({ lowEnd = false }: { lowEnd?: boolean }) {
   return (
     <group>
       <BuildingShell />
-      <Lobby />
-      <CentralCorridor />
+      <Lobby lowEnd={lowEnd} />
+      <CentralCorridor lowEnd={lowEnd} />
       {galleryLayouts.map((layout) => (
-        <GalleryRoom key={layout.roomId} layout={layout} />
+        <GalleryRoom key={layout.roomId} layout={layout} lowEnd={lowEnd} />
       ))}
     </group>
   );

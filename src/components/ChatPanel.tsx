@@ -8,6 +8,7 @@ export function ChatPanel() {
   const messages = useStore((state) => state.chatMessages)
   const playerId = useStore((state) => state.multiplayerPlayerId)
   const queueChat = useStore((state) => state.queueChat)
+  const duel = useStore((state) => state.duel)
   const input = useRef<HTMLInputElement>(null)
   const [draft, setDraft] = useState('')
   const latestMessageId = messages[messages.length - 1]?.id
@@ -33,7 +34,7 @@ export function ChatPanel() {
     return () => window.clearTimeout(timer)
   }, [latestMessageId])
 
-  if (!entered) return null
+  if (!entered || duel) return null
   const showLog = chatOpen || latestMessageId !== expiredMessageId
 
   const submit = (event: FormEvent) => {

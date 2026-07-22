@@ -71,8 +71,30 @@ public sealed class DuelRoom
         if (direction.LengthSquared() < 0.01f) return;
         direction = Vector2.Normalize(direction);
         var toTarget = new Vector2(target.State.X - shooter.State.X, target.State.Z - shooter.State.Z);
-        var distance = toTarget.Length();
-        if (distance < 0.01f || distance > 24f || Vector2.Dot(direction, Vector2.Normalize(toTarget)) < 0.965f) return;
+        var projection = Vector2.Dot(toTarget, direction);
+        var perpendicular = projection > 0 ? (toTarget - direction * projection).Length() : float.PositiveInfinity;
+        var obstacleDistance = DistanceToFirstObstacle(new Vector2(shooter.State.X, shooter.State.Z), direction);
+        var hit = projection > 0 && projection <= obstacleDistance && perpendicular <= PlayerRadius + 0.18f;
+        var shotDistance = hit ? projection : obstacleDistance;
+        var endX = shooter.State.X + direction.X * shotDistance;
+        var endZ = shooter.State.Z + direction.Y * shotDistance;
+        var startY = Math.Max(EyeHeight - 0.22f, shooter.State.Y - 0.22f);
+        var endY = hit ? Math.Max(0.8f, target.State.Y - 0.25f) : startY;
+
+        _ = BroadcastShotAsync(new
+        {
+            shotId = Guid.NewGuid().ToString("N"),
+            shooterId = shooter.Id,
+            startX = shooter.State.X,
+            startY,
+            startZ = shooter.State.Z,
+            endX,
+            endY,
+            endZ,
+            hit
+        });
+
+        if (!hit) return;
         _health[target.Id] = Math.Max(0, _health[target.Id] - 34);
         if (_health[target.Id] == 0) EndRound(shooter.Id);
     }
@@ -143,8 +165,8 @@ public sealed class DuelRoom
 
     private void SpawnRound()
     {
-        _first.State.X = ArenaX - 20; _first.State.Z = ArenaZ; _first.State.DirX = 1; _first.State.DirZ = 0;
-        _second.State.X = ArenaX + 20; _second.State.Z = ArenaZ; _second.State.DirX = -1; _second.State.DirZ = 0;
+        _first.State.X = ArenaX - 22; _first.State.Z = ArenaZ - 22; _first.State.DirX = 1; _first.State.DirZ = 1;
+        _second.State.X = ArenaX + 22; _second.State.Z = ArenaZ + 22; _second.State.DirX = -1; _second.State.DirZ = -1;
         _first.State.Y = _second.State.Y = EyeHeight;
         _verticalVelocity[_first.Id] = _verticalVelocity[_second.Id] = 0;
         _health[_first.Id] = _health[_second.Id] = 100;
@@ -158,6 +180,10 @@ public sealed class DuelRoom
         }};
         await Task.WhenAll(_first.SendAsync("duelSnapshot", payload, token), _second.SendAsync("duelSnapshot", payload, token));
     }
+
+    private Task BroadcastShotAsync(object payload) => Task.WhenAll(
+        _first.SendAsync("duelShot", payload, CancellationToken.None),
+        _second.SendAsync("duelShot", payload, CancellationToken.None));
 
     private void Finish(string winnerId, bool aborted)
     {
@@ -193,6 +219,47 @@ public sealed class DuelRoom
         return Cover.Any(cover =>
             Math.Abs(localX - cover.X) < cover.HalfX + PlayerRadius &&
             Math.Abs(localZ - cover.Z) < cover.HalfZ + PlayerRadius);
+    }
+
+    private static float DistanceToFirstObstacle(Vector2 worldOrigin, Vector2 direction)
+    {
+        var origin = new Vector2(worldOrigin.X - ArenaX, worldOrigin.Y - ArenaZ);
+        var boundaryX = direction.X > 0
+            ? (ArenaLimit - origin.X) / direction.X
+            : direction.X < 0 ? (-ArenaLimit - origin.X) / direction.X : float.PositiveInfinity;
+        var boundaryZ = direction.Y > 0
+            ? (ArenaLimit - origin.Y) / direction.Y
+            : direction.Y < 0 ? (-ArenaLimit - origin.Y) / direction.Y : float.PositiveInfinity;
+        var nearest = Math.Min(boundaryX, boundaryZ);
+
+        foreach (var cover in Cover)
+        {
+            nearest = Math.Min(nearest, RayBoxDistance(origin, direction, cover));
+        }
+        return Math.Clamp(nearest, 0.1f, ArenaLimit * 2);
+    }
+
+    private static float RayBoxDistance(Vector2 origin, Vector2 direction, (float X, float Z, float HalfX, float HalfZ) box)
+    {
+        var minimum = 0f;
+        var maximum = float.PositiveInfinity;
+        if (!ClipRayAxis(origin.X, direction.X, box.X - box.HalfX - PlayerRadius, box.X + box.HalfX + PlayerRadius, ref minimum, ref maximum)
+            || !ClipRayAxis(origin.Y, direction.Y, box.Z - box.HalfZ - PlayerRadius, box.Z + box.HalfZ + PlayerRadius, ref minimum, ref maximum))
+        {
+            return float.PositiveInfinity;
+        }
+        return minimum > 0.01f ? minimum : float.PositiveInfinity;
+    }
+
+    private static bool ClipRayAxis(float origin, float direction, float minimumBound, float maximumBound, ref float minimum, ref float maximum)
+    {
+        if (Math.Abs(direction) < 0.0001f) return origin >= minimumBound && origin <= maximumBound;
+        var first = (minimumBound - origin) / direction;
+        var second = (maximumBound - origin) / direction;
+        if (first > second) (first, second) = (second, first);
+        minimum = Math.Max(minimum, first);
+        maximum = Math.Min(maximum, second);
+        return maximum >= minimum;
     }
 
     private void Restore(ClientConnection player)
